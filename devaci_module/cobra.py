@@ -34,9 +34,9 @@ import cobra.model.fvns
 import cobra.model.phys
 import cobra.model.qos
 from typing import Optional
-from modules import JinjaResult
 from datetime import datetime
 
+from .jinja import JinjaResult
 
 import urllib3
 
@@ -145,7 +145,9 @@ class CobraClass:
                 if self.config.configMos:
                     self._result.output = self.config
                     self._result.success = True
-                    self._result.log = '[CobraClass]: Template was sucessfully rendered.'
+                    self._result.log = (
+                        "[CobraClass]: Template was sucessfully rendered."
+                    )
             else:
                 self._result.log = jinja.log
                 self._result.success = False

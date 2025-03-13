@@ -17,7 +17,8 @@ import cobra.mit.access
 import cobra.mit.request
 from datetime import datetime
 from typing import Union
-from modules import JinjaClass, CobraClass
+from .jinja import JinjaClass
+from .cobra import CobraClass
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -179,6 +180,9 @@ class DeployClass:
         """
         Deploy configuration
         """
+        if self._template:
+            self._jinja.render(self._template)
+            self._cobra.render(self._jinja.result)
         try:
             if self._cobra.result.output:
                 if self.login():

@@ -1,0 +1,10 @@
+dotenv
+Jinja2
+pathlib
+PyYAML
+openpyxl
+pandas
+urllib3
+setuptools
+wheel
+twine

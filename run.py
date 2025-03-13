@@ -1,17 +1,12 @@
 import os
 from pathlib import Path
-from modules import DeployClass
+from devaci_module import DeployClass
 from dotenv import load_dotenv
 
 
 ROOT = Path(__file__).parent
 
-PRODUCTION = False
-
-if PRODUCTION:
-    load_dotenv(ROOT / ".testing")
-else:
-    load_dotenv(ROOT / ".testing")
+load_dotenv(ROOT / ".env")
 
 SETTINGS = {
     "username": os.getenv("USER"),
@@ -22,12 +17,7 @@ SETTINGS = {
 }
 
 
-def main():
-    aci = DeployClass(**SETTINGS)
-    aci.template = ROOT / "examples/create_tenant.j2"
-    aci.render()
-    aci.deploy()
-
-
 if __name__ == "__main__":
-    main()
+    aci = DeployClass(**SETTINGS)
+    aci.template = ROOT / "test.j2"
+    aci.deploy()

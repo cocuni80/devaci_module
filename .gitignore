@@ -102,7 +102,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-
 .DS_Store
 node_modules
 /dist
@@ -127,9 +126,5 @@ pnpm-debug.log*
 *.sln
 *.sw?
 
-# frontend
-frontend/node_modules/
-frontend/webpack-stats.json
-frontend/package-lock.json
-frontend/yarn.lock
-frontend/.browserslistrc
+#Cobra
+/package
