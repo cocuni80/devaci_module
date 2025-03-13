@@ -1,0 +1,16 @@
+#------------------------------------------------------------------
+# Global Variables
+
+{% set rollback = '' %}
+{% set tenant = 'Interbank' %}
+{% set descr = 'Testing' %}
+
+#------------------------------------------------------------------
+# Add Tenant
+
+fvTenant:
+  - name: {{tenant}}
+    descr: {{descr}}
+    status: created,modified,{{rollback}}
+    
+#------------------------------------------------------------------

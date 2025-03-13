@@ -1,0 +1,16 @@
+[
+    {
+        "date":"13.03.2025_02.41.13",
+        "output":{
+            "fvTenant":{
+                "attributes":{
+                    "descr":"Testing",
+                    "name":"Interbank",
+                    "status":"created,modified"
+                }
+            }
+        },
+        "success":true,
+        "log":"[DeployClass]: c:\\Users\\chris\\Documents\\VisualProjects\\aci_scripts\\app\\examples\\create_tenant.j2 was succesfully deployed."
+    }
+]
