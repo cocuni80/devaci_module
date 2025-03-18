@@ -1,6 +1,6 @@
 [
     {
-        "date":"18.03.2025_03.27.52",
+        "date":"18.03.2025_11.12.58",
         "output":[
             {
                 "create_tenant1.j2":{
@@ -27,8 +27,8 @@
         ],
         "success":true,
         "log":[
-            "[DeployClass]: create_tenant1.j2 was succesfully deployed.",
-            "[DeployClass]: create_tenant2.j2 was succesfully deployed."
+            "[RenderClass]: create_tenant1.j2 was validated.",
+            "[RenderClass]: create_tenant2.j2 was validated."
         ]
     }
 ]

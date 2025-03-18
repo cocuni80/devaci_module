@@ -23,4 +23,5 @@ if __name__ == "__main__":
         ROOT / "examples/create_tenant1.j2",
         ROOT / "examples/create_tenant2.j2",
     ]
+    #aci.check()
     aci.deploy()
