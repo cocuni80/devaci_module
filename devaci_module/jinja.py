@@ -12,6 +12,7 @@ from yaml import load
 
 import jinja2
 import yaml
+from pathlib import Path
 
 # ------------------------------------------   Safe Loader
 
@@ -120,7 +121,7 @@ class JinjaClass:
         # --------------   Output Information
         self._result = JinjaResult()
 
-    def render(self, path) -> None:
+    def render(self, path: Path) -> None:
         try:
             with open(path, "r", encoding="utf-8") as file:
                 self._template = file.read()
@@ -128,22 +129,30 @@ class JinjaClass:
             render_str = env.from_string(self._template).render()
             self._result.output = load(render_str, MySafeLoader)
             self._result.success = True
-            self._result.log = '[JinjaClass]: Jinja template was sucessfully rendered.'
+            self._result.log = "[JinjaClass]: Jinja template was sucessfully rendered."
         except ScannerError as e:
-            self._result.log = "[ScannerError]:" + str(e)
-            #print(f"\x1b[33;1m[ScannerError]: {str(e)}\x1b[0m")
+            self._result.log = f"[ScannerError]: Error deploying {path.name}!. {str(e)}"
+            # print(f"\x1b[33;1m[ScannerError]: {str(e)}\x1b[0m")
         except jinja2.exceptions.TemplateSyntaxError as e:
-            self._result.log = "[TemplateSyntaxError]:" + str(e)
-            #print(f"\x1b[33;1m[TemplateSyntaxError]: {str(e)}\x1b[0m")
+            self._result.log = (
+                f"[TemplateSyntaxError]: Error deploying {path.name}!. {str(e)}"
+            )
+            # print(f"\x1b[33;1m[TemplateSyntaxError]: {str(e)}\x1b[0m")
         except jinja2.exceptions.UndefinedError as e:
-            self._result.log = "[UndefinedError]:" + str(e)
-            #print(f"\x1b[31;1m[UndefinedError]: {str(e)}\x1b[0m")
+            self._result.log = (
+                f"[UndefinedError]: Error deploying {path.name}!. {str(e)}"
+            )
+            # print(f"\x1b[31;1m[UndefinedError]: {str(e)}\x1b[0m")
         except yaml.MarkedYAMLError as e:
-            self._result.log = "[MarkedYAMLError]:" + str(e)
-            #print(f"\x1b[31;1m[MarkedYAMLError]: {str(e)}\x1b[0m")
+            self._result.log = (
+                f"[MarkedYAMLError]: Error deploying {path.name}!. {str(e)}"
+            )
+            # print(f"\x1b[31;1m[MarkedYAMLError]: {str(e)}\x1b[0m")
         except Exception as e:
-            self._result.log = "[JinjaException]:" + str(e)
-            #print(f"\x1b[31;1m[JinjaException]: {str(e)}\x1b[0m")
+            self._result.log = (
+                f"[JinjaException]: Error deploying {path.name}!. {str(e)}"
+            )
+            # print(f"\x1b[31;1m[JinjaException]: {str(e)}\x1b[0m")
 
     @property
     def result(self) -> JinjaResult:

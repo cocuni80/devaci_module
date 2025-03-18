@@ -49,6 +49,9 @@ SETTINGS = {
 
 if __name__ == "__main__":
     aci = DeployClass(**SETTINGS)
-    aci.template = ROOT / "examples/create_tenant.j2"
+    aci.template = [
+        ROOT / "examples/create_tenant1.j2",
+        ROOT / "examples/create_tenant2.j2",
+    ]
     aci.deploy()
 ```

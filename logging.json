@@ -1,16 +1,34 @@
 [
     {
-        "date":"18.03.2025_00.43.07",
-        "output":{
-            "fvTenant":{
-                "attributes":{
-                    "descr":"Testing",
-                    "name":"Tenant1",
-                    "status":"created,modified"
+        "date":"18.03.2025_03.27.52",
+        "output":[
+            {
+                "create_tenant1.j2":{
+                    "fvTenant":{
+                        "attributes":{
+                            "descr":"Testing",
+                            "name":"Tenant1",
+                            "status":"created,modified"
+                        }
+                    }
+                }
+            },
+            {
+                "create_tenant2.j2":{
+                    "fvTenant":{
+                        "attributes":{
+                            "descr":"Testing",
+                            "name":"Tenant2",
+                            "status":"created,modified"
+                        }
+                    }
                 }
             }
-        },
+        ],
         "success":true,
-        "log":"[DeployClass]: c:\\Users\\chris\\Documents\\VisualProjects\\devaci_module\\examples\\create_tenant.j2 was succesfully deployed."
+        "log":[
+            "[DeployClass]: create_tenant1.j2 was succesfully deployed.",
+            "[DeployClass]: create_tenant2.j2 was succesfully deployed."
+        ]
     }
 ]

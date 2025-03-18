@@ -16,6 +16,7 @@ import cobra.mit.session
 import cobra.mit.access
 import cobra.mit.request
 from datetime import datetime
+from pathlib import Path
 from typing import Union
 from .jinja import JinjaClass
 from .cobra import CobraClass
@@ -33,9 +34,9 @@ class DeployResult:
 
     def __init__(self):
         self.date = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
-        self._output = None
+        self._output = list()
         self._success = False
-        self._log = str()
+        self._log = list()
 
     @property
     def output(self) -> dict:
@@ -46,7 +47,7 @@ class DeployResult:
         return self._success
 
     @property
-    def log(self) -> str:
+    def log(self) -> list:
         return self._log
 
     @property
@@ -66,11 +67,11 @@ class DeployResult:
 
     @log.setter
     def log(self, value) -> None:
-        self._log = value
+        self._log.append(value)
 
     @output.setter
     def output(self, value) -> None:
-        self._output = value
+        self._output.append(value)
 
     def __str__(self):
         return "DeployerResult"
@@ -82,11 +83,16 @@ class DeployResult:
 class DeployClass:
     """
     Cobra Deployer Class from Cobra SDK
+    \n username: APIC username
+    \n password: APIC username
+    \n ip: APIC IPv4
+    \n log: Logging file path
+    \n logging: True or False
     """
 
     def __init__(self, **kwargs):
         # --------------   Render Information
-        self._template = kwargs.get("template", None)
+        self._template: list = kwargs.get("template", [])
         self.log = kwargs.get("log", "logging.json")
 
         # --------------   Login Information
@@ -111,8 +117,6 @@ class DeployClass:
         )
         self.__modir = cobra.mit.access.MoDirectory(self._session)
 
-        self._jinja = JinjaClass()
-        self._cobra = CobraClass()
         self._result = DeployResult()
 
     # -------------------------------------------------   Control
@@ -164,51 +168,59 @@ class DeployClass:
             print(f"\x1b[31;1m[SessionError]: {str(e)}\x1b[0m")
             self._result.log = f"[SessionError]: {str(e)}"
 
-    def render(self) -> None:
+    def commit(self, template: Path) -> None:
         """
-        Render Template
+        Commit configuration
         """
-        if self._template:
-            self._jinja.render(self._template)
-            self._cobra.render(self._jinja.result)
-            if self.logging:
-                self.record()
-        else:
-            print("\x1b[31;1m[RenderError]: No Valid Template.\x1b[0m")
+        try:
+            _jinja = JinjaClass()
+            _cobra = CobraClass()
+            _jinja.render(template)
+            _cobra.render(_jinja.result)
+            if _cobra.result.output:
+                self._result.output = {
+                    template.name: json.loads(_cobra.result.output.data)
+                }
+                self.__modir.commit(_cobra.result.output)
+                self._result.success = True
+                msg = f"[DeployClass]: {template.name} was succesfully deployed."
+                print(f"\x1b[32;1m{msg}\x1b[0m")
+                self._result.log = msg
+            else:
+                # self._result.log = "[DeployError]: No valid Cobra template."
+                print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
+                self._result.log = _cobra.result.log
+        except cobra.mit.request.CommitError as e:
+            print(
+                f"\x1b[31;1m[DeployError]: Error deploying {template.name}!. {str(e)}\x1b[0m"
+            )
+            self._result.success = False
+            self._result.log = (
+                f"[DeployError]: Error deploying {template.name}!. {str(e)}"
+            )
+        except Exception as e:
+            print(
+                f"\x1b[31;1m[DeployException]: Error deploying {template.name}!. {str(e)}\x1b[0m"
+            )
+            self._result.success = False
+            self._result.log = f"\x1b[31;1m[DeployException]: Error deploying {template.name}!. {str(e)}\x1b[0m"
 
     def deploy(self) -> None:
         """
         Deploy configuration
         """
-        if self._template:
-            self._jinja.render(self._template)
-            self._cobra.render(self._jinja.result)
-        try:
-            if self._cobra.result.output:
-                if self.login():
-                    self._result.output = json.loads(self._cobra.result.output.data)
-                    self.__modir.commit(self._cobra.result.output)
-                    self._result.success = True
-                    self.logout()
-                    self._result.log = (
-                        f"[DeployClass]: {self._template} was succesfully deployed."
-                    )
-                    print(f"\x1b[32;1m{self._result.log}\x1b[0m")
+        if self.login():
+            if self._template:
+                for temp in self._template:
+                    self.commit(temp)
             else:
-                # self._result.log = "[DeployError]: No valid Cobra template."
-                self._result.log = self._cobra.result.log
-                print(f"\x1b[31;1m{self._result.log}\x1b[0m")
-        except cobra.mit.request.CommitError as e:
-            print(f"\x1b[31;1m[DeployError]: {str(e)}\x1b[0m")
-            self._result.success = False
-            self._result.log = f"[DeployError]: {str(e)}"
-        except Exception as e:
-            print(f"\x1b[31;1m[DeployException]: {str(e)}\x1b[0m")
-            self._result.success = False
-            self._result.log = f"[DeployException]: {str(e)}"
-        finally:
-            if self.logging:
-                self.record()
+                msg = "[DeployException]: No templates configured!."
+                print(f"\x1b[31;1m{msg}\x1b[0m")
+                self._result.success = False
+                self._result.log = msg
+            self.logout()
+        if self.logging:
+            self.record()
 
     def record(self) -> None:
         """
@@ -223,9 +235,22 @@ class DeployClass:
         )
 
     @property
-    def template(self) -> Union[str, list[str]]:
+    def template(self) -> list[Path]:
+        """
+        Define your template:
+        \n - Option1: Use Path for define the template, Ex. \n aci.template = Path1
+        \n - Option2: List of Path for multiple templates deployments, Ex. \n aci.template = [Path1, Path2, ...]
+        \n - Option3: Each time you define a path a list is generated and each new path is added to this list, Ex. \n aci.template = Path1 \n aci.template = Path2 \n Result: aci.template = [Path1, Path2]
+        """
         return self._template
 
     @template.setter
     def template(self, value) -> None:
-        self._template = value
+        if isinstance(value, Path):
+            self._template.append(value)
+        elif isinstance(value, list) and all(isinstance(item, Path) for item in value):
+            self._template = value
+        else:
+            self._result.success = False
+            self._result.log = "[DeployException]: No valid templates!."
+            self._template = []
