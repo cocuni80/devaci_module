@@ -1,4 +1,4 @@
-# Netscaler Module
+# DEVACI Module
 DEVACI module for python 3.x
 
 ## Requirements
