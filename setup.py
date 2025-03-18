@@ -5,17 +5,18 @@ with open("README.md", "r") as fh:
 
 INSTALL_REQUIRES = [
     "urllib3",
+    "pathlib",
     "Jinja2",
     "PyYAML",
     "pandas",
     "openpyxl",
     "acicobra",
-    "acimodel"
+    "acimodel",
 ]
 
 setuptools.setup(
     name="devaci_module",
-    version="1.0",
+    version="1.1",
     author="Jorge Riveros",
     author_email="christian.riveros@outlook.com",
     license="MIT",
