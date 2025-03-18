@@ -1,16 +1,16 @@
 [
     {
-        "date":"13.03.2025_03.45.53",
+        "date":"18.03.2025_00.43.07",
         "output":{
             "fvTenant":{
                 "attributes":{
                     "descr":"Testing",
-                    "name":"Interbank",
+                    "name":"Tenant1",
                     "status":"created,modified"
                 }
             }
         },
         "success":true,
-        "log":"[DeployClass]: c:\\Users\\chris\\Documents\\VisualProjects\\devaci_module\\test.j2 was succesfully deployed."
+        "log":"[DeployClass]: c:\\Users\\chris\\Documents\\VisualProjects\\devaci_module\\examples\\create_tenant.j2 was succesfully deployed."
     }
 ]

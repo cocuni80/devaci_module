@@ -3,7 +3,7 @@ DEVACI module for python 3.x
 
 ## Requirements
 Before of install devaci module, you must install the acicobra and acimodel package.
-They can be downloaded from the APIC controller https://<APIC>/cobra/_downloads/
+They can be downloaded from the APIC controller https://APIC_IP/cobra/_downloads/
 
 ```shell
 $ pip install acicobra*
@@ -49,6 +49,6 @@ SETTINGS = {
 
 if __name__ == "__main__":
     aci = DeployClass(**SETTINGS)
-    aci.template = ROOT / "test.j2"
+    aci.template = ROOT / "examples/create_tenant.j2"
     aci.deploy()
 ```
