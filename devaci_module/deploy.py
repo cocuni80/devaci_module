@@ -168,6 +168,57 @@ class DeployClass:
             print(f"\x1b[31;1m[SessionError]: {str(e)}\x1b[0m")
             self._result.log = f"[SessionError]: {str(e)}"
 
+    def render(self, template: Path) -> None:
+        """
+        Commit configuration
+        """
+        try:
+            _jinja = JinjaClass()
+            _cobra = CobraClass()
+            _jinja.render(template)
+            _cobra.render(_jinja.result)
+            if _cobra.result.output:
+                self._result.output = {
+                    template.name: json.loads(_cobra.result.output.data)
+                }
+                self._result.success = True
+                msg = f"[RenderClass]: {template.name} was validated."
+                print(f"\x1b[32;1m{msg}\x1b[0m")
+                self._result.log = msg
+            else:
+                # self._result.log = "[DeployError]: No valid Cobra template."
+                print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
+                self._result.log = _cobra.result.log
+        except cobra.mit.request.CommitError as e:
+            print(
+                f"\x1b[31;1m[RenderError]: Error validating {template.name}!. {str(e)}\x1b[0m"
+            )
+            self._result.success = False
+            self._result.log = (
+                f"[RenderError]: Error deploying {template.name}!. {str(e)}"
+            )
+        except Exception as e:
+            print(
+                f"\x1b[31;1m[RenderException]: Error validating {template.name}!. {str(e)}\x1b[0m"
+            )
+            self._result.success = False
+            self._result.log = f"\x1b[31;1m[DeployException]: Error deploying {template.name}!. {str(e)}\x1b[0m"
+
+    def check(self) -> None:
+        """
+        Render configuration
+        """
+        if self._template:
+            for temp in self._template:
+                self.render(temp)
+        else:
+            msg = "[RenderException]: No templates configured!."
+            print(f"\x1b[31;1m{msg}\x1b[0m")
+            self._result.success = False
+            self._result.log = msg
+        if self.logging:
+            self.record()
+
     def commit(self, template: Path) -> None:
         """
         Commit configuration
