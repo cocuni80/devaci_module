@@ -16,11 +16,11 @@ INSTALL_REQUIRES = [
 
 setuptools.setup(
     name="devaci_module",
-    version="1.1",
+    version="1.2",
     author="Jorge Riveros",
     author_email="christian.riveros@outlook.com",
     license="MIT",
-    description="A Python package to program the Cisco ACI through the APIC using the supported Cobra SDK",
+    description="A Python package to program the Cisco ACI using the official Cobra SDK",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/cocuni80/devaci_module",
