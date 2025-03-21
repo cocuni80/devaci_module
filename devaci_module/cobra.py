@@ -594,6 +594,19 @@ class CobraClass:
         Tenants > Managed Node Connectivity Groups
         """
         return self._mo
+    
+    def fabricRsOosPath(self, value):
+        """
+        Fabric > RsOosPath
+        """
+        try:
+            for item in value:
+                fabric_inst = cobra.model.fabric.Inst(self.__uni)
+                ser_pol = cobra.model.fabric.OOServicePol(fabric_inst)
+                mo = cobra.model.fabric.RsOosPath(ser_pol, **item)
+                self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[fabricRsOosPathError]: " + str(e)
 
     def fabricSetupP(self, value):
         """

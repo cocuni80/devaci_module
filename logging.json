@@ -1,34 +1,58 @@
 [
     {
-        "date":"18.03.2025_11.12.58",
+        "date":"20.03.2025_01.59.59",
         "output":[
             {
-                "create_tenant1.j2":{
-                    "fvTenant":{
+                "shutdown_interfaces.j2":{
+                    "fabricOOServicePol":{
                         "attributes":{
-                            "descr":"Testing",
-                            "name":"Tenant1",
                             "status":"created,modified"
-                        }
-                    }
-                }
-            },
-            {
-                "create_tenant2.j2":{
-                    "fvTenant":{
-                        "attributes":{
-                            "descr":"Testing",
-                            "name":"Tenant2",
-                            "status":"created,modified"
-                        }
+                        },
+                        "children":[
+                            {
+                                "fabricRsOosPath":{
+                                    "attributes":{
+                                        "lc":"blacklist",
+                                        "status":"created,modified",
+                                        "tDn":"topology\/pod-1\/paths-101\/pathep-[eth1\/1]"
+                                    }
+                                }
+                            },
+                            {
+                                "fabricRsOosPath":{
+                                    "attributes":{
+                                        "lc":"blacklist",
+                                        "status":"created,modified",
+                                        "tDn":"topology\/pod-1\/paths-101\/pathep-[eth1\/2]"
+                                    }
+                                }
+                            },
+                            {
+                                "fabricRsOosPath":{
+                                    "attributes":{
+                                        "lc":"blacklist",
+                                        "status":"deleted",
+                                        "tDn":"topology\/pod-2\/paths-102\/pathep-[eth1\/1]"
+                                    }
+                                }
+                            },
+                            {
+                                "fabricRsOosPath":{
+                                    "attributes":{
+                                        "lc":"blacklist",
+                                        "status":"deleted",
+                                        "tDn":"topology\/pod-2\/paths-102\/pathep-[eth1\/2]"
+                                    }
+                                }
+                            }
+                        ]
                     }
                 }
             }
         ],
         "success":true,
         "log":[
-            "[RenderClass]: create_tenant1.j2 was validated.",
-            "[RenderClass]: create_tenant2.j2 was validated."
+            "[RenderClass]: shutdown_interfaces.j2 was validated."
         ]
     }
 ]
