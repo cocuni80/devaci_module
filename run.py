@@ -12,15 +12,18 @@ SETTINGS = {
     "username": os.getenv("USER"),
     "password": os.getenv("PASS"),
     "ip": os.getenv("IP"),
-    "log": ROOT / "logging.json",
+    "testing": True,
     "logging": True,
+    "render_to_xml": True,
+    "log": ROOT / "logging.json",
 }
 
 
 if __name__ == "__main__":
     aci = DeployClass(**SETTINGS)
     aci.template = [
-        ROOT / "testing/shutdown_interfaces.j2",
+        ROOT / "testing/create_tenant1.j2",
+        ROOT / "testing/set_fabric.j2",
     ]
-    aci.check()
-    #aci.deploy()
+    aci.deploy()
+    aci.show_output()

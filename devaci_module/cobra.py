@@ -599,10 +599,10 @@ class CobraClass:
         """
         Fabric > RsOosPath
         """
-        try:
+        try:            
+            fabric_inst = cobra.model.fabric.Inst(self.__uni)
+            ser_pol = cobra.model.fabric.OOServicePol(fabric_inst)
             for item in value:
-                fabric_inst = cobra.model.fabric.Inst(self.__uni)
-                ser_pol = cobra.model.fabric.OOServicePol(fabric_inst)
                 mo = cobra.model.fabric.RsOosPath(ser_pol, **item)
                 self.config.addMo(mo)
         except Exception as e:

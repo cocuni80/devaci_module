@@ -1,58 +1,14 @@
 [
     {
-        "date":"20.03.2025_01.59.59",
-        "output":[
-            {
-                "shutdown_interfaces.j2":{
-                    "fabricOOServicePol":{
-                        "attributes":{
-                            "status":"created,modified"
-                        },
-                        "children":[
-                            {
-                                "fabricRsOosPath":{
-                                    "attributes":{
-                                        "lc":"blacklist",
-                                        "status":"created,modified",
-                                        "tDn":"topology\/pod-1\/paths-101\/pathep-[eth1\/1]"
-                                    }
-                                }
-                            },
-                            {
-                                "fabricRsOosPath":{
-                                    "attributes":{
-                                        "lc":"blacklist",
-                                        "status":"created,modified",
-                                        "tDn":"topology\/pod-1\/paths-101\/pathep-[eth1\/2]"
-                                    }
-                                }
-                            },
-                            {
-                                "fabricRsOosPath":{
-                                    "attributes":{
-                                        "lc":"blacklist",
-                                        "status":"deleted",
-                                        "tDn":"topology\/pod-2\/paths-102\/pathep-[eth1\/1]"
-                                    }
-                                }
-                            },
-                            {
-                                "fabricRsOosPath":{
-                                    "attributes":{
-                                        "lc":"blacklist",
-                                        "status":"deleted",
-                                        "tDn":"topology\/pod-2\/paths-102\/pathep-[eth1\/2]"
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
-        ],
+        "date":"24.03.2025_03.06.17",
+        "output":{
+            "create_tenant1.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<fvTenant descr='Testing' name='Tenant1' status='created,modified'><\/fvTenant>",
+            "set_fabric.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<infraInfra status='created,modified'><infraAccPortP name='LEAF113-SWITCH_ifselector' status='modified'><infraHPortS descr='OC148952' name='Switch113_1-ports-27' status='created,modified' type='range'><infraRsAccBaseGrp status='created,modified' tDn='uni\/infra\/funcprof\/accbundle-FwPaloAltoSEGMT_PLM2_VpcPolGrp'><\/infraRsAccBaseGrp><infraPortBlk fromPort='27' name='block2' status='created,modified' toPort='27'><\/infraPortBlk><\/infraHPortS><\/infraAccPortP><infraAccPortP name='LEAF116-SWITCH_ifselector' status='modified'><infraHPortS descr='OC148952' name='Switch116_1-ports-27' status='created,modified' type='range'><infraRsAccBaseGrp status='created,modified' tDn='uni\/infra\/funcprof\/accbundle-FwPaloAltoSEGMT_PLM2_VpcPolGrp'><\/infraRsAccBaseGrp><infraPortBlk fromPort='27' name='block2' status='created,modified' toPort='27'><\/infraPortBlk><\/infraHPortS><\/infraAccPortP><infraAccPortP name='LEAF119-SWITCH_ifselector' status='modified'><infraHPortS descr='OC148952' name='Switch119_1-ports-39' status='created,modified' type='range'><infraRsAccBaseGrp status='created,modified' tDn='uni\/infra\/funcprof\/accbundle-FwPaloAltoSEGMT_PSU_VpcPolGrp'><\/infraRsAccBaseGrp><infraPortBlk fromPort='39' name='block2' status='created,modified' toPort='39'><\/infraPortBlk><\/infraHPortS><\/infraAccPortP><infraAccPortP name='LEAF120-SWITCH_ifselector' status='modified'><infraHPortS descr='OC148952' name='Switch120_1-ports-39' status='created,modified' type='range'><infraRsAccBaseGrp status='created,modified' tDn='uni\/infra\/funcprof\/accbundle-FwPaloAltoSEGMT_PSU_VpcPolGrp'><\/infraRsAccBaseGrp><infraPortBlk fromPort='39' name='block2' status='created,modified' toPort='39'><\/infraPortBlk><\/infraHPortS><\/infraAccPortP><infraFuncP status='created,modified'><infraAccBndlGrp annotation='orchestrator:devaci' descr='OC148952' lagT='node' name='FwPaloAltoSEGMT_PLM2_VpcPolGrp' status='created,modified'><infraRsHIfPol status='created,modified' tnFabricHIfPolName='LLP_Auto_10G'><\/infraRsHIfPol><infraRsCdpIfPol status='created,modified' tnCdpIfPolName='CDP-DISABLED'><\/infraRsCdpIfPol><infraRsLldpIfPol status='created,modified' tnLldpIfPolName='LLDP-DISABLED'><\/infraRsLldpIfPol><infraRsLacpPol status='created,modified' tnLacpLagPolName='LACP-ACTIVE'><\/infraRsLacpPol><infraRsAttEntP status='created,modified' tDn='uni\/infra\/attentp-PaloAlto_AAEP'><\/infraRsAttEntP><\/infraAccBndlGrp><infraAccBndlGrp annotation='orchestrator:devaci' descr='OC148952' lagT='node' name='FwPaloAltoSEGMT_PSU_VpcPolGrp' status='created,modified'><infraRsHIfPol status='created,modified' tnFabricHIfPolName='LLP_Auto_10G'><\/infraRsHIfPol><infraRsCdpIfPol status='created,modified' tnCdpIfPolName='CDP-DISABLED'><\/infraRsCdpIfPol><infraRsLldpIfPol status='created,modified' tnLldpIfPolName='LLDP-DISABLED'><\/infraRsLldpIfPol><infraRsLacpPol status='created,modified' tnLacpLagPolName='LACP-ACTIVE'><\/infraRsLacpPol><infraRsAttEntP status='created,modified' tDn='uni\/infra\/attentp-PaloAlto_AAEP'><\/infraRsAttEntP><\/infraAccBndlGrp><\/infraFuncP><\/infraInfra>"
+        },
         "success":true,
-        "log":[
-            "[RenderClass]: shutdown_interfaces.j2 was validated."
-        ]
+        "log":{
+            "create_tenant1.j2":"[RenderClass]: create_tenant1.j2 was validated.",
+            "set_fabric.j2":"[RenderClass]: set_fabric.j2 was validated."
+        }
     }
 ]

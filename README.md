@@ -42,8 +42,10 @@ SETTINGS = {
     "username": os.getenv("USER"),
     "password": os.getenv("PASS"),
     "ip": os.getenv("IP"),
-    "log": ROOT / "logging.json",
+    "testing": True,
     "logging": True,
+    "render_to_xml": True,
+    "log": ROOT / "logging.json",
 }
 
 
@@ -54,4 +56,5 @@ if __name__ == "__main__":
         ROOT / "examples/create_tenant2.j2",
     ]
     aci.deploy()
+    aci.show_output()
 ```
