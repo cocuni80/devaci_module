@@ -19,6 +19,8 @@ import cobra.mit.request
 from datetime import datetime
 from pathlib import Path
 from typing import Union
+import rich
+from rich.syntax import Syntax
 from .jinja import JinjaClass
 from .cobra import CobraClass
 
@@ -301,20 +303,32 @@ class DeployClass:
             force_ascii=False,
         )
 
-    def show_output(self) -> None:
+    def show_output(self, theme: str = "fruity", line_numbers: bool = True) -> None:
         """
-        Show indent Output
+        Show indent Output in pretty format
+        \n- theme: <monokai, dracula, solarized-dark, solarized-light, github, gruvbox-dark, gruvbox-light, nord, fruity>\n- line_numbers: Boolean
         """
         if self._result.output:
-            if self.render_to_xml:
-                for key, value in self._result.output.items():
-                    print(f"\n------> {key} output. <-------\n")
+            for key, value in self._result.output.items():
+                msg = f"\n-------------------> {key} output."
+                print(f"\x1b[1m\x1b[42m{msg}\x1b[0m")
+
+                if self.render_to_xml:
                     dom = xml.dom.minidom.parseString(value)
-                    print(dom.toprettyxml(indent="  "))
-            else:
-                for key, value in self._result.output.items():
-                    print(f"\n------> {key} output. <-------\n")
-                    print(json.dumps(value, indent=4, ensure_ascii=False))
+                    pretty_xml = dom.toprettyxml(indent="\t")
+                    rich.print(
+                        Syntax(
+                            pretty_xml, "xml", theme=theme, line_numbers=line_numbers
+                        )
+                    )
+
+                else:
+                    pretty_json = json.dumps(value, indent=4, ensure_ascii=False)
+                    rich.print(
+                        Syntax(
+                            pretty_json, "json", theme=theme, line_numbers=line_numbers
+                        )
+                    )
 
     @property
     def result(self):
@@ -322,15 +336,15 @@ class DeployClass:
 
     @property
     def output(self):
-        return self._result.output[0]
+        return self._result.output
 
     @property
     def template(self) -> list[Path]:
         """
         Define your template:
-        \n - Option1: Use Path for define the template, Ex. \n aci.template = Path1
-        \n - Option2: List of Path for multiple templates deployments, Ex. \n aci.template = [Path1, Path2, ...]
-        \n - Option3: Each time you define a path a list is generated and each new path is added to this list, Ex. \n aci.template = Path1 \n aci.template = Path2 \n Result: aci.template = [Path1, Path2]
+        \n- Option1: Use Path for define the template, Ex. \n aci.template = Path1
+        \n- Option2: List of Path for multiple templates deployments, Ex. \n aci.template = [Path1, Path2, ...]
+        \n- Option3: Each time you define a path a list is generated and each new path is added to this list, \nEx. \n aci.template = Path1 \n aci.template = Path2 \n Result: aci.template = [Path1, Path2]
         """
         return self._template
 

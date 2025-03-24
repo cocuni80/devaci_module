@@ -23,7 +23,7 @@ if __name__ == "__main__":
     aci = DeployClass(**SETTINGS)
     aci.template = [
         ROOT / "testing/create_tenant1.j2",
-        ROOT / "testing/set_fabric.j2",
+        ROOT / "testing/create_tenant2.j2",
     ]
     aci.deploy()
     aci.show_output()
