@@ -12,6 +12,7 @@ import requests
 import urllib3
 import json
 import pandas as pd
+import xml.dom.minidom
 import cobra.mit.session
 import cobra.mit.access
 import cobra.mit.request
@@ -29,14 +30,14 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class DeployResult:
     """
-    The DeployerResult class return the results for Deployer logs
+    The DeployResult class return the results for Deployer logs
     """
 
     def __init__(self):
         self.date = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
-        self._output = list()
+        self._output = dict()
         self._success = False
-        self._log = list()
+        self._log = dict()
 
     @property
     def output(self) -> dict:
@@ -47,7 +48,7 @@ class DeployResult:
         return self._success
 
     @property
-    def log(self) -> list:
+    def log(self) -> dict:
         return self._log
 
     @property
@@ -67,11 +68,11 @@ class DeployResult:
 
     @log.setter
     def log(self, value) -> None:
-        self._log.append(value)
+        self._log.update(value)
 
     @output.setter
     def output(self, value) -> None:
-        self._output.append(value)
+        self._output.update(value)
 
     def __str__(self):
         return "DeployerResult"
@@ -82,10 +83,11 @@ class DeployResult:
 
 class DeployClass:
     """
-    Cobra Deployer Class from Cobra SDK
+    Cobra DeployClass from Cobra SDK
     \n username: APIC username
     \n password: APIC username
     \n ip: APIC IPv4
+    \n testing: True or False
     \n log: Logging file path
     \n logging: True or False
     """
@@ -101,7 +103,9 @@ class DeployClass:
         self.__token = kwargs.get("token", None)
         self._timeout = kwargs.get("timeout", 180)
         self._secure = kwargs.get("secure", False)
+        self.testing = kwargs.get("testing", False)
         self.logging = kwargs.get("logging", False)
+        self.render_to_xml = kwargs.get("render_to_xml", False)
 
         # --------------   Controller Information
         self._ip = kwargs.get("ip", "127.0.0.1")
@@ -129,20 +133,24 @@ class DeployClass:
             self.__modir.login()
             return True
         except cobra.mit.session.LoginError as e:
-            print(f"\x1b[31;1m[LoginError]: {str(e)}\x1b[0m")
-            self._result.log = f"[LoginError]: {str(e)}"
+            msg = f"[LoginError]: {str(e)}"
+            self._result.log = {"login": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
             return False
         except cobra.mit.request.QueryError as e:
-            print(f"\x1b[31;1m[QueryError]: {str(e)}\x1b[0m")
-            self._result.log = f"[QueryError]: {str(e)}"
+            msg = f"[QueryError]: {str(e)}"
+            self._result.log = {"login": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
             return False
         except requests.exceptions.ConnectionError as e:
-            print(f"\x1b[31;1m[ConnectionError]: {str(e)}\x1b[0m")
-            self._result.log = f"[ConnectionError]: {str(e)}"
+            msg = f"[ConnectionError]: {str(e)}"
+            self._result.log = {"login": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
             return False
         except Exception as e:
-            print(f"\x1b[31;1m[LoginError]: {str(e)}\x1b[0m")
-            self._result.log = f"[LoginError]: {str(e)}"
+            msg = f"[LoginException]: {str(e)}"
+            self._result.log = {"login": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
             return False
 
     def logout(self) -> None:
@@ -150,8 +158,9 @@ class DeployClass:
             if self.__modir.exists:
                 self.__modir.logout()
         except Exception as e:
-            print(f"\x1b[31;1m[LogoutError]: {str(e)}\x1b[0m")
-            self._result.log = f"[LogoutError]: {str(e)}"
+            msg = f"[LogoutError]: {str(e)}"
+            self._result.log = {"logout": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
 
     def session_recreate(self, cookie, version) -> None:
         """
@@ -165,12 +174,13 @@ class DeployClass:
             session._version = version
             self.__modir = cobra.mit.access.MoDirectory(session)
         except Exception as e:
-            print(f"\x1b[31;1m[SessionError]: {str(e)}\x1b[0m")
-            self._result.log = f"[SessionError]: {str(e)}"
+            msg = f"[SessionError]: {str(e)}"
+            self._result.log = {"session": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
 
     def render(self, template: Path) -> None:
         """
-        Commit configuration
+        Render configuration
         """
         try:
             _jinja = JinjaClass()
@@ -178,46 +188,31 @@ class DeployClass:
             _jinja.render(template)
             _cobra.render(_jinja.result)
             if _cobra.result.output:
-                self._result.output = {
-                    template.name: json.loads(_cobra.result.output.data)
-                }
+                if self.render_to_xml:
+                    self._result.output = {template.name: _cobra.result.output.xmldata}
+                else:
+                    self._result.output = {
+                        template.name: json.loads(_cobra.result.output.data)
+                    }
                 self._result.success = True
                 msg = f"[RenderClass]: {template.name} was validated."
+                self._result.log = {template.name: msg}
                 print(f"\x1b[32;1m{msg}\x1b[0m")
-                self._result.log = msg
             else:
-                # self._result.log = "[DeployError]: No valid Cobra template."
+                # self._result.log = "[RenderError]: No valid Cobra template."
+                self._result.success = False
+                self._result.log = {template.name: _cobra.result.log}
                 print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
-                self._result.log = _cobra.result.log
         except cobra.mit.request.CommitError as e:
-            print(
-                f"\x1b[31;1m[RenderError]: Error validating {template.name}!. {str(e)}\x1b[0m"
-            )
             self._result.success = False
-            self._result.log = (
-                f"[RenderError]: Error deploying {template.name}!. {str(e)}"
-            )
-        except Exception as e:
-            print(
-                f"\x1b[31;1m[RenderException]: Error validating {template.name}!. {str(e)}\x1b[0m"
-            )
-            self._result.success = False
-            self._result.log = f"\x1b[31;1m[DeployException]: Error deploying {template.name}!. {str(e)}\x1b[0m"
-
-    def check(self) -> None:
-        """
-        Render configuration
-        """
-        if self._template:
-            for temp in self._template:
-                self.render(temp)
-        else:
-            msg = "[RenderException]: No templates configured!."
+            msg = f"[RenderError]: Error validating {template.name}!. {str(e)}"
+            self._result.log = {template.name: msg}
             print(f"\x1b[31;1m{msg}\x1b[0m")
+        except Exception as e:
             self._result.success = False
-            self._result.log = msg
-        if self.logging:
-            self.record()
+            msg = f"[RenderException]: Error validating {template.name}!. {str(e)}"
+            self._result.log = {template.name: msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
 
     def commit(self, template: Path) -> None:
         """
@@ -229,47 +224,68 @@ class DeployClass:
             _jinja.render(template)
             _cobra.render(_jinja.result)
             if _cobra.result.output:
-                self._result.output = {
-                    template.name: json.loads(_cobra.result.output.data)
-                }
+                if self.render_to_xml:
+                    self._result.output = {template.name: _cobra.result.output.xmldata}
+                else:
+                    self._result.output = {
+                        template.name: json.loads(_cobra.result.output.data)
+                    }
                 self.__modir.commit(_cobra.result.output)
                 self._result.success = True
                 msg = f"[DeployClass]: {template.name} was succesfully deployed."
+                self._result.log = {template.name: msg}
                 print(f"\x1b[32;1m{msg}\x1b[0m")
-                self._result.log = msg
             else:
                 # self._result.log = "[DeployError]: No valid Cobra template."
+                self._result.success = False
+                self._result.log = {template.name: _cobra.result.log}
                 print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
-                self._result.log = _cobra.result.log
         except cobra.mit.request.CommitError as e:
-            print(
-                f"\x1b[31;1m[DeployError]: Error deploying {template.name}!. {str(e)}\x1b[0m"
-            )
             self._result.success = False
-            self._result.log = (
-                f"[DeployError]: Error deploying {template.name}!. {str(e)}"
-            )
+            msg = f"[DeployError]: Error deploying {template.name}!. {str(e)}"
+            self._result.log = {template.name: msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
         except Exception as e:
-            print(
-                f"\x1b[31;1m[DeployException]: Error deploying {template.name}!. {str(e)}\x1b[0m"
-            )
             self._result.success = False
-            self._result.log = f"\x1b[31;1m[DeployException]: Error deploying {template.name}!. {str(e)}\x1b[0m"
+            msg = f"[DeployException]: Error deploying {template.name}!. {str(e)}"
+            self._result.log = {template.name: msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
+
+    def check(self) -> None:
+        """
+        Render configuration
+        """
+        if self._template:
+            for temp in self._template:
+                self.render(temp)
+        else:
+            self._result.success = False
+            msg = "[RenderException]: No templates configured!."
+            self._result.log = {"check": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
+        if self.logging:
+            self.record()
 
     def deploy(self) -> None:
         """
         Deploy configuration
         """
-        if self.login():
-            if self._template:
+        if not self._template:
+            self._result.success = False
+            msg = "[RenderException]: No templates configured!."
+            self._result.log = {"render": msg} if self.testing else {"deploy": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
+            return
+
+        if self.testing:
+            for temp in self._template:
+                self.render(temp)
+        else:
+            if self.login():
                 for temp in self._template:
                     self.commit(temp)
-            else:
-                msg = "[DeployException]: No templates configured!."
-                print(f"\x1b[31;1m{msg}\x1b[0m")
-                self._result.success = False
-                self._result.log = msg
-            self.logout()
+                self.logout()
+
         if self.logging:
             self.record()
 
@@ -284,6 +300,29 @@ class DeployClass:
             indent=4,
             force_ascii=False,
         )
+
+    def show_output(self) -> None:
+        """
+        Show indent Output
+        """
+        if self._result.output:
+            if self.render_to_xml:
+                for key, value in self._result.output.items():
+                    print(f"\n------> {key} output. <-------\n")
+                    dom = xml.dom.minidom.parseString(value)
+                    print(dom.toprettyxml(indent="  "))
+            else:
+                for key, value in self._result.output.items():
+                    print(f"\n------> {key} output. <-------\n")
+                    print(json.dumps(value, indent=4, ensure_ascii=False))
+
+    @property
+    def result(self):
+        return self._result
+
+    @property
+    def output(self):
+        return self._result.output[0]
 
     @property
     def template(self) -> list[Path]:
