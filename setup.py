@@ -5,6 +5,7 @@ with open("README.md", "r") as fh:
 
 INSTALL_REQUIRES = [
     "urllib3",
+    "dotenv",
     "pathlib",
     "Jinja2",
     "PyYAML",
