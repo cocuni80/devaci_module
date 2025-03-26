@@ -1,12 +1,13 @@
 [
     {
-        "date":"24.03.2025_11.29.43",
+        "date":"26.03.2025_10.10.01",
         "output":{
             "create_tenant1.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<fvTenant descr='Testing' name='Tenant1' status='created,modified'><\/fvTenant>",
             "create_tenant2.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<fvTenant descr='Testing' name='Tenant2' status='created,modified'><\/fvTenant>"
         },
         "success":true,
         "log":{
+            "create_tenants.j2":"[fvTenantError]: 'NoneType' object is not iterable",
             "create_tenant1.j2":"[RenderClass]: create_tenant1.j2 was validated.",
             "create_tenant2.j2":"[RenderClass]: create_tenant2.j2 was validated."
         }

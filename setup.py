@@ -10,6 +10,7 @@ INSTALL_REQUIRES = [
     "PyYAML",
     "pandas",
     "openpyxl",
+    "rich",
     "acicobra",
     "acimodel",
 ]

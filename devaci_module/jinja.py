@@ -121,12 +121,12 @@ class JinjaClass:
         # --------------   Output Information
         self._result = JinjaResult()
 
-    def render(self, path: Path) -> None:
+    def render(self, path: Path, **kwargs) -> None:
         try:
             with open(path, "r", encoding="utf-8") as file:
                 self._template = file.read()
             env = jinja2.Environment(**self._setup)
-            render_str = env.from_string(self._template).render()
+            render_str = env.from_string(self._template).render(kwargs)
             self._result.output = load(render_str, MySafeLoader)
             self._result.success = True
             self._result.log = "[JinjaClass]: Jinja template was sucessfully rendered."

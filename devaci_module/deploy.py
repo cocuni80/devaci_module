@@ -8,9 +8,12 @@
 
 """ACI module configuration for the ACI Python SDK (cobra)."""
 
+import os
 import requests
 import urllib3
 import json
+import sys
+import time
 import pandas as pd
 import xml.dom.minidom
 import cobra.mit.session
@@ -18,7 +21,6 @@ import cobra.mit.access
 import cobra.mit.request
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 import rich
 from rich.syntax import Syntax
 from .jinja import JinjaClass
@@ -122,6 +124,8 @@ class DeployClass:
             self._timeout,
         )
         self.__modir = cobra.mit.access.MoDirectory(self._session)
+        self._variables: dict = {}
+        # self._path: Path = None
 
         self._result = DeployResult()
 
@@ -187,7 +191,7 @@ class DeployClass:
         try:
             _jinja = JinjaClass()
             _cobra = CobraClass()
-            _jinja.render(template)
+            _jinja.render(template, **self._variables)
             _cobra.render(_jinja.result)
             if _cobra.result.output:
                 if self.render_to_xml:
@@ -223,7 +227,7 @@ class DeployClass:
         try:
             _jinja = JinjaClass()
             _cobra = CobraClass()
-            _jinja.render(template)
+            _jinja.render(template, **self._variables)
             _cobra.render(_jinja.result)
             if _cobra.result.output:
                 if self.render_to_xml:
@@ -284,6 +288,7 @@ class DeployClass:
                 self.render(temp)
         else:
             if self.login():
+                self.temporizador("Deploying templates in")
                 for temp in self._template:
                     self.commit(temp)
                 self.logout()
@@ -303,6 +308,19 @@ class DeployClass:
             force_ascii=False,
         )
 
+    def temporizador(self, msg: str = "", delay: int = 5) -> None:
+        """
+        Default 5sec
+        """
+        for seconds in range(delay + 1):
+            barra = "██" * seconds + "  " * (delay - seconds)
+            sys.stdout.write(
+                f"\r\x1b[33;1m{msg} [\x1b[37;1m{barra}\x1b[33;1m] {seconds}/{delay} seconds."
+            )
+            sys.stdout.flush()
+            time.sleep(1)
+        print("\n\x1b[0m")
+
     def show_output(self, theme: str = "fruity", line_numbers: bool = True) -> None:
         """
         Show indent Output in pretty format
@@ -311,7 +329,7 @@ class DeployClass:
         if self._result.output:
             for key, value in self._result.output.items():
                 msg = f"\n-------------------> {key} output."
-                print(f"\x1b[1m\x1b[42m{msg}\x1b[0m")
+                print(f"\x1b[1m\x1b[47;1m{msg}\x1b[0m")
 
                 if self.render_to_xml:
                     dom = xml.dom.minidom.parseString(value)
@@ -339,6 +357,10 @@ class DeployClass:
         return self._result.output
 
     @property
+    def variables(self):
+        return self._variables
+
+    @property
     def template(self) -> list[Path]:
         """
         Define your template:
@@ -348,8 +370,25 @@ class DeployClass:
         """
         return self._template
 
+    @property
+    def csv(self) -> Path:
+        """
+        Show CSV file path.
+        """
+        return self._path
+
+    @property
+    def xlsx(self) -> Path:
+        """
+        Show XLSX file path.
+        """
+        return self._path
+
     @template.setter
     def template(self, value) -> None:
+        """
+        Insert templates path to list of templates
+        """
         if isinstance(value, Path):
             self._template.append(value)
         elif isinstance(value, list) and all(isinstance(item, Path) for item in value):
@@ -358,3 +397,62 @@ class DeployClass:
             self._result.success = False
             self._result.log = "[DeployException]: No valid templates!."
             self._template = []
+
+    @csv.setter
+    def csv(self, value) -> None:
+        """
+        Insert CSV files path to list of Variables
+        """
+        if isinstance(value, Path):
+            try:
+                name = os.path.splitext(os.path.basename(value))[0]
+                df = pd.read_csv(value)
+                self._variables = self._variables | {name: df.to_dict(orient="records")}
+            except Exception as e:
+                msg = f"[CSVException]: Error loading file!. {str(e)}"
+                print(f"\x1b[31;1m{msg}\x1b[0m")
+        elif isinstance(value, list) and all(isinstance(item, Path) for item in value):
+            for item in value:
+                try:
+                    name = os.path.splitext(os.path.basename(item))[0]
+                    df = pd.read_csv(item)
+                    self._variables = self._variables | {
+                        name: df.to_dict(orient="records")
+                    }
+                except Exception as e:
+                    msg = f"[CSVException]: Error loading file!. {str(e)}"
+                    print(f"\x1b[31;1m{msg}\x1b[0m")
+        else:
+            self._result.success = False
+            self._result.log = "[LoadException]: No valid CSV files!."
+            self._variables = []
+
+    @xlsx.setter
+    def xlsx(self, value) -> None:
+        """
+        Insert XLSX files path to list of Variables
+        """
+        if isinstance(value, Path):
+            try:
+                sheets = pd.read_excel(value, sheet_name=None)
+                self._variables = self._variables | {
+                    sheet: df.to_dict(orient="records") for sheet, df in sheets.items()
+                }
+            except Exception as e:
+                msg = f"[XLSXException]: Error loading file!. {str(e)}"
+                print(f"\x1b[31;1m{msg}\x1b[0m")
+        elif isinstance(value, list) and all(isinstance(item, Path) for item in value):
+            for item in value:
+                try:
+                    sheets = pd.read_excel(item, sheet_name=None)
+                    self._variables = self._variables | {
+                        sheet: df.to_dict(orient="records")
+                        for sheet, df in sheets.items()
+                    }
+                except Exception as e:
+                    msg = f"[XLSXException]: Error loading file!. {str(e)}"
+                    print(f"\x1b[31;1m{msg}\x1b[0m")
+        else:
+            self._result.success = False
+            self._result.log = "[LoadException]: No valid XLSX files!."
+            self._variables = []
