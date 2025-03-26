@@ -21,9 +21,13 @@ SETTINGS = {
 
 if __name__ == "__main__":
     aci = DeployClass(**SETTINGS)
+    aci.xlsx = [
+        ROOT / "configurations/config1.xlsx",
+    ]
     aci.template = [
-        ROOT / "testing/create_tenant1.j2",
-        ROOT / "testing/create_tenant2.j2",
+        ROOT / "templates/create_tenants.j2",
+        ROOT / "templates/create_tenant1.j2",
+        ROOT / "templates/create_tenant2.j2",
     ]
     aci.deploy()
     aci.show_output()

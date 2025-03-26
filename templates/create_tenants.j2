@@ -1,16 +1,15 @@
 #------------------------------------------------------------------
-# Global Variables
-
-{% set rollback = '' %}
-{% set tenant = 'Tenant1' %}
-{% set descr = 'Testing' %}
-
+#
+# Global Variables loaded from XLSX or CSV files
+#
 #------------------------------------------------------------------
 # Add Tenant
 
 fvTenant:
-  - name: {{tenant}}
-    descr: {{descr}}
-    status: created,modified,{{rollback}}
+{% for tenant in tenants %}
+  - name: {{tenant.name}}
+    descr: {{tenant.descr}}
+    status: {{tenant.status}}
+{% endfor %}
     
 #------------------------------------------------------------------
