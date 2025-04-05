@@ -12,7 +12,7 @@ SETTINGS = {
     "username": os.getenv("USER"),
     "password": os.getenv("PASS"),
     "ip": os.getenv("IP"),
-    "testing": True,
+    #"testing": True,
     "logging": True,
     "render_to_xml": True,
     "log": ROOT / "logging.json",
@@ -25,6 +25,7 @@ if __name__ == "__main__":
         ROOT / "configurations/config1.xlsx",
     ]
     aci.template = [
+        ROOT / "testing/bgp_route_reflector.j2",
         ROOT / "templates/create_tenants.j2",
         ROOT / "templates/create_tenant1.j2",
         ROOT / "templates/create_tenant2.j2",

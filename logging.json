@@ -1,16 +1,18 @@
 [
     {
-        "date":"26.03.2025_10.24.46",
+        "date":"04.04.2025_18.36.43",
         "output":{
+            "bgp_route_reflector.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bgpRRP status='created,modified'><bgpRRNodePEp descr='spine101' id='101' podId='1' status='created,modified'><\/bgpRRNodePEp><bgpRRNodePEp descr='spine102' id='102' podId='1' status='created,modified'><\/bgpRRNodePEp><bgpRRNodePEp descr='spine103' id='103' podId='2' status='created,modified'><\/bgpRRNodePEp><bgpRRNodePEp descr='spine104' id='104' podId='2' status='created,modified'><\/bgpRRNodePEp><\/bgpRRP>",
             "create_tenants.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<polUni status='created,modified'><fvTenant descr='Test Tenant1' name='Tenant1' status='created,modified'><\/fvTenant><fvTenant descr='Test Tenant2' name='Tenant2' status='created,modified'><\/fvTenant><fvTenant descr='Test Tenant3' name='Tenant3' status='created,modified'><\/fvTenant><fvTenant descr='Test Tenant4' name='Tenant4' status='created,modified'><\/fvTenant><\/polUni>",
             "create_tenant1.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<fvTenant descr='Testing' name='Tenant1' status='created,modified'><\/fvTenant>",
             "create_tenant2.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<fvTenant descr='Testing' name='Tenant2' status='created,modified'><\/fvTenant>"
         },
         "success":true,
         "log":{
-            "create_tenants.j2":"[RenderClass]: create_tenants.j2 was validated.",
-            "create_tenant1.j2":"[RenderClass]: create_tenant1.j2 was validated.",
-            "create_tenant2.j2":"[RenderClass]: create_tenant2.j2 was validated."
+            "bgp_route_reflector.j2":"[DeployClass]: bgp_route_reflector.j2 was succesfully deployed.",
+            "create_tenants.j2":"[DeployClass]: create_tenants.j2 was succesfully deployed.",
+            "create_tenant1.j2":"[DeployClass]: create_tenant1.j2 was succesfully deployed.",
+            "create_tenant2.j2":"[DeployClass]: create_tenant2.j2 was succesfully deployed."
         }
     }
 ]

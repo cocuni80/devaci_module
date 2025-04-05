@@ -33,6 +33,7 @@ import cobra.model.pol
 import cobra.model.fvns
 import cobra.model.phys
 import cobra.model.qos
+import cobra.model.bgp
 from typing import Optional
 from datetime import datetime
 
@@ -594,12 +595,12 @@ class CobraClass:
         Tenants > Managed Node Connectivity Groups
         """
         return self._mo
-    
+
     def fabricRsOosPath(self, value):
         """
         Fabric > RsOosPath
         """
-        try:            
+        try:
             fabric_inst = cobra.model.fabric.Inst(self.__uni)
             ser_pol = cobra.model.fabric.OOServicePol(fabric_inst)
             for item in value:
@@ -1357,3 +1358,23 @@ class CobraClass:
                 self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[l2extDomPError]: " + str(e)
+
+    def bgpInstPol(self, value) -> None:
+        """
+        System Settings > All Tenants
+        """
+        try:
+            fabric_inst = cobra.model.fabric.Inst(self.__uni)
+            InstPol = cobra.model.bgp.InstPol(fabric_inst, **value)
+            if "RRP" in value:
+                RRP = cobra.model.bgp.RRP(InstPol)
+                for item in value["RRP"]:
+                    mo = cobra.model.bgp.RRNodePEp(RRP, **item)
+                    self.config.addMo(mo)
+            if "ExtRRP" in value:
+                ExtRRP = cobra.model.bgp.ExtRRP(InstPol)
+                for item in value["ExtRRP"]:
+                    mo = cobra.model.bgp.RRNodePEp(ExtRRP, **item)
+                    self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[bgpRRNodePEpError]: " + str(e)
