@@ -12,6 +12,9 @@ import json
 import cobra.mit.session
 import cobra.mit.access
 import cobra.mit.request
+import cobra.model.aaa
+import cobra.model.ep
+import cobra.model.coop
 import cobra.model.ctrlr
 import cobra.model.fv
 import cobra.model.l3ext
@@ -33,6 +36,9 @@ import cobra.model.pol
 import cobra.model.fvns
 import cobra.model.phys
 import cobra.model.qos
+import cobra.model.bgp
+import cobra.model.pki
+import cobra.model.isis
 from typing import Optional
 from datetime import datetime
 
@@ -124,6 +130,7 @@ class CobraClass:
         self.__root = ""
         self.__uni = cobra.model.pol.Uni(self.__root)
         self.__infra = cobra.model.infra.Infra(self.__uni)
+        self.__fabric_inst = cobra.model.fabric.Inst(self.__uni)
         self.config = cobra.mit.request.ConfigRequest()
 
         # --------------   Output Information
@@ -594,12 +601,12 @@ class CobraClass:
         Tenants > Managed Node Connectivity Groups
         """
         return self._mo
-    
+
     def fabricRsOosPath(self, value):
         """
         Fabric > RsOosPath
         """
-        try:            
+        try:
             fabric_inst = cobra.model.fabric.Inst(self.__uni)
             ser_pol = cobra.model.fabric.OOServicePol(fabric_inst)
             for item in value:
@@ -1357,3 +1364,134 @@ class CobraClass:
                 self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[l2extDomPError]: " + str(e)
+
+    def bgpInstPol(self, value) -> None:
+        """
+        System Settings > All Tenants
+        """
+        try:
+            InstPol = cobra.model.bgp.InstPol(self.__fabric_inst, **value)
+            if "RRP" in value:
+                RRP = cobra.model.bgp.RRP(InstPol)
+                for item in value["RRP"]:
+                    mo = cobra.model.bgp.RRNodePEp(RRP, **item)
+                    self.config.addMo(mo)
+            if "ExtRRP" in value:
+                ExtRRP = cobra.model.bgp.ExtRRP(InstPol)
+                for item in value["ExtRRP"]:
+                    mo = cobra.model.bgp.RRNodePEp(ExtRRP, **item)
+                    self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[bgpRRNodePEpError]: " + str(e)
+
+    def coopPol(self, value) -> None:
+        """
+        System Settings > COOP Group
+        """
+        try:
+            mo = cobra.model.coop.Pol(self.__fabric_inst, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[coopPolError]: " + str(e)
+
+    def datetimeFormat(self, value) -> None:
+        """
+        System Settings > Date and Time
+        """
+        try:
+            mo = cobra.model.datetime.Format(self.__fabric_inst, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[datetimeFormatError]: " + str(e)
+
+    def aaaFabricSec(self, value) -> None:
+        """
+        System Settings > Fabric Security
+        """
+        try:
+            UserEp = cobra.model.aaa.UserEp(self.__uni)
+            mo = cobra.model.aaa.FabricSec(UserEp, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[aaaFabricSecError]: " + str(e)
+
+    def aaaPreLoginBanner(self, value) -> None:
+        """
+        System Settings > System Alias and Banners
+        """
+        try:
+            UserEp = cobra.model.aaa.UserEp(self.__uni)
+            mo = cobra.model.aaa.PreLoginBanner(UserEp, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[aaaPreLoginBannerError]: " + str(e)
+
+    def pkiExportEncryptionKey(self, value) -> None:
+        """
+        System Settings > Fabric Security
+        """
+        try:
+            mo = cobra.model.pki.ExportEncryptionKey(self.__uni, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[pkiExportEncryptionKeyError]: " + str(e)
+
+    def epLoopProtectP(self, value) -> None:
+        """
+        System Settings > Enpoint Controls > The endpoint loop protection
+        """
+        try:
+            mo = cobra.model.ep.LoopProtectP(self.__infra, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[epLoopProtectPError]: " + str(e)
+
+    def epControlP(self, value) -> None:
+        """
+        System Settings > Enpoint Controls > Rogue EP Control
+        """
+        try:
+            mo = cobra.model.ep.ControlP(self.__infra, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[epControlPError]: " + str(e)
+
+    def epIpAgingP(self, value) -> None:
+        """
+        System Settings > Enpoint Controls > IP Aging
+        """
+        try:
+            mo = cobra.model.ep.IpAgingP(self.__infra, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[epIpAgingPError]: " + str(e)
+
+    def infraSetPol(self, value) -> None:
+        """
+        System Settings > Fabric-Wide Settings
+        """
+        try:
+            mo = cobra.model.infra.SetPol(self.__infra, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[infraSetPolError]: " + str(e)
+
+    def isisDomPol(self, value) -> None:
+        """
+        System Settings > ISIS Policy
+        """
+        try:
+            mo = cobra.model.isis.DomPol(self.__fabric_inst, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[isisDomPolError]: " + str(e)
+
+    def infraPortTrackPol(self, value) -> None:
+        """
+        System Settings > Port Tracking
+        """
+        try:
+            mo = cobra.model.infra.PortTrackPol(self.__infra, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[infraPortTrackPolError]: " + str(e)

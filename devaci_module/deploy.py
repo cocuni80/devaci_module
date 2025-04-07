@@ -308,7 +308,7 @@ class DeployClass:
             force_ascii=False,
         )
 
-    def temporizador(self, msg: str = "", delay: int = 5) -> None:
+    def temporizador(self, msg: str = "", delay: int = 3) -> None:
         """
         Default 5sec
         """

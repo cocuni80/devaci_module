@@ -35,6 +35,14 @@ class MySafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Resolver)
         Resolver.__init__(self)
 
 
+for first_char, resolvers in list(MySafeLoader.yaml_implicit_resolvers.items()):
+    filtered = [r for r in resolvers if r[0] != "tag:yaml.org,2002:bool"]
+    if filtered:
+        MySafeLoader.yaml_implicit_resolvers[first_char] = filtered
+    else:
+        del MySafeLoader.yaml_implicit_resolvers[first_char]
+
+
 class JinjaError(Exception):
     """
     Jinja2 class manage the exceptions for rendering
