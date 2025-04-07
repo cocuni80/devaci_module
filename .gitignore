@@ -129,5 +129,7 @@ pnpm-debug.log*
 #Cobra
 /package
 /testing
+/formats
 notes.txt
 requirements.txt
+test.py
