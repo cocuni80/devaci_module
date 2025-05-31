@@ -17,6 +17,20 @@ from pathlib import Path
 # ------------------------------------------   Safe Loader
 
 
+def str_to_bool(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).lower() in ("true", "yes", "1")
+
+
+def no_convert_int_constructor(loader, node):
+    return node.value
+
+
+def no_convert_float_constructor(loader, node):
+    return node.value
+
+
 class MySafeConstructor(SafeConstructor):
     def add_bool(self, node):
         return self.construct_scalar(node)
@@ -34,6 +48,9 @@ class MySafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Resolver)
         SafeConstructor.__init__(self)
         Resolver.__init__(self)
 
+
+MySafeLoader.add_constructor("tag:yaml.org,2002:int", no_convert_int_constructor)
+MySafeLoader.add_constructor("tag:yaml.org,2002:float", no_convert_float_constructor)
 
 for first_char, resolvers in list(MySafeLoader.yaml_implicit_resolvers.items()):
     filtered = [r for r in resolvers if r[0] != "tag:yaml.org,2002:bool"]
@@ -134,6 +151,7 @@ class JinjaClass:
             with open(path, "r", encoding="utf-8") as file:
                 self._template = file.read()
             env = jinja2.Environment(**self._setup)
+            env.filters["bool"] = str_to_bool
             render_str = env.from_string(self._template).render(kwargs)
             self._result.output = load(render_str, MySafeLoader)
             self._result.success = True

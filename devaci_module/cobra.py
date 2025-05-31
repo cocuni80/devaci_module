@@ -14,6 +14,7 @@ import cobra.mit.access
 import cobra.mit.request
 import cobra.model.aaa
 import cobra.model.ep
+import cobra.model.geo
 import cobra.model.coop
 import cobra.model.ctrlr
 import cobra.model.fv
@@ -39,6 +40,8 @@ import cobra.model.qos
 import cobra.model.bgp
 import cobra.model.pki
 import cobra.model.isis
+import cobra.model.latency
+import cobra.model.infrazone
 from typing import Optional
 from datetime import datetime
 
@@ -129,6 +132,7 @@ class CobraClass:
         # --------------   ACI Information
         self.__root = ""
         self.__uni = cobra.model.pol.Uni(self.__root)
+        #elf.__uni.setConfigZone("PROD")
         self.__infra = cobra.model.infra.Infra(self.__uni)
         self.__fabric_inst = cobra.model.fabric.Inst(self.__uni)
         self.config = cobra.mit.request.ConfigRequest()
@@ -141,11 +145,12 @@ class CobraClass:
 
     def render(self, jinja: JinjaResult) -> CobraResult:
         try:
-            if jinja.success:
+            if jinja.success and jinja.output:
                 for key, value in jinja.output.items():
                     try:
-                        caller = getattr(CobraClass, key)
-                        caller(self, value)
+                        if value:
+                            caller = getattr(CobraClass, key)
+                            caller(self, value)
                     except AttributeError as e:
                         self._result.log = "[AttributeError]: " + str(e)
 
@@ -156,7 +161,10 @@ class CobraClass:
                         "[CobraClass]: Template was sucessfully rendered."
                     )
             else:
-                self._result.log = jinja.log
+                if not jinja.success:
+                    self._result.log = jinja.log
+                else:
+                    self._result.log = "[CobraClass]: No valid data."
                 self._result.success = False
         except TypeError as e:
             self._result.log = "[TypeError]: " + str(e)
@@ -602,6 +610,20 @@ class CobraClass:
         """
         return self._mo
 
+    def fabricSetupPol(self, value):
+        """
+        Fabric > Inventory > Pod Fabric Setup Policy
+        """
+        try:
+            ctrlr_inst = cobra.model.ctrlr.Inst(self.__uni)
+            SetupPol = cobra.model.fabric.SetupPol(ctrlr_inst, **value)
+            if "SetupP" in value:
+                for item in value["SetupP"]:
+                    mo = cobra.model.fabric.SetupP(SetupPol, **item)
+                    self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[fabricSetupPolError]: " + str(e)
+
     def fabricRsOosPath(self, value):
         """
         Fabric > RsOosPath
@@ -628,18 +650,19 @@ class CobraClass:
         except Exception as e:
             self._result.log = "[fabricSetupPError]: " + str(e)
 
-    def fabricNodeIdentP(self, value):
+    def fabricNodeIdentPol(self, value):
         """
         Fabric > Inventory > Fabric Membership
         """
         try:
-            for item in value:
-                ctrlr_inst = cobra.model.ctrlr.Inst(self.__uni)
-                node_ident_pol = cobra.model.fabric.NodeIdentPol(ctrlr_inst)
-                mo = cobra.model.fabric.NodeIdentP(node_ident_pol, **item)
-                self.config.addMo(mo)
+            ctrlr_inst = cobra.model.ctrlr.Inst(self.__uni)
+            node_ident_pol = cobra.model.fabric.NodeIdentPol(ctrlr_inst, **value)
+            if "NodeIdentP" in value:
+                for item in value["NodeIdentP"]:
+                    mo = cobra.model.fabric.NodeIdentP(node_ident_pol, **item)
+                    self.config.addMo(mo)
         except Exception as e:
-            self._result.log = "[fabricNodeIdentPError]: " + str(e)
+            self._result.log = "[NodeIdentPolPError]: " + str(e)
 
     def fabricPodPGrp(self, value):
         """
@@ -774,24 +797,45 @@ class CobraClass:
         Fabric > Fabric Policies > Policies > Pod > Date and Time
         """
         try:
-            for item in value:
-                fabric_inst = cobra.model.fabric.Inst(self.__uni)
-                mo = cobra.model.datetime.Pol(fabric_inst, **item)
-                if "datetimeNtpAuthKey" in item:
-                    for ntp_auth_key in item["datetimeNtpAuthKey"]:
-                        cobra.model.datetime.NtpAuthKey(mo, **ntp_auth_key)
-                if "datetimeNtpProv" in item:
-                    for ntp_prov in item["datetimeNtpProv"]:
-                        mo_ntp_prov = cobra.model.datetime.NtpProv(mo, **ntp_prov)
-                        if "datetimeRsNtpProvToNtpAuthKey" in ntp_prov:
-                            cobra.model.datetime.RsNtpProvToNtpAuthKey(
-                                mo_ntp_prov, **ntp_prov["datetimeRsNtpProvToNtpAuthKey"]
+            Inst = cobra.model.fabric.Inst(self.__uni)
+            for datetimePol in value:
+                Pol = cobra.model.datetime.Pol(Inst, **datetimePol)
+                self.config.addMo(Pol)
+                if "datetimeNtpAuthKey" in datetimePol:
+                    for datetimeNtpAuthKey in datetimePol["datetimeNtpAuthKey"]:
+                        if not_nan(datetimeNtpAuthKey):
+                            NtpAuthKey = cobra.model.datetime.NtpAuthKey(
+                                Pol, **datetimeNtpAuthKey
                             )
-                        if "datetimeRsNtpProvToEpg" in ntp_prov:
-                            cobra.model.datetime.RsNtpProvToEpg(
-                                mo_ntp_prov, **ntp_prov["datetimeRsNtpProvToEpg"]
+                            self.config.addMo(NtpAuthKey)
+                if "datetimeNtpProv" in datetimePol:
+                    for datetimeNtpProv in datetimePol["datetimeNtpProv"]:
+                        if not_nan(datetimeNtpProv):
+                            NtpProv = cobra.model.datetime.NtpProv(
+                                Pol, **datetimeNtpProv
                             )
-                self.config.addMo(mo)
+                            self.config.addMo(NtpProv)
+                            if "datetimeRsNtpProvToNtpAuthKey" in datetimeNtpProv:
+                                for datetimeRsNtpProvToNtpAuthKey in datetimeNtpProv[
+                                    "datetimeRsNtpProvToNtpAuthKey"
+                                ]:
+                                    if not_nan(datetimeRsNtpProvToNtpAuthKey):
+                                        RsNtpProvToNtpAuthKey = (
+                                            cobra.model.datetime.RsNtpProvToNtpAuthKey(
+                                                NtpProv,
+                                                **datetimeRsNtpProvToNtpAuthKey,
+                                            )
+                                        )
+                                        self.config.addMo(RsNtpProvToNtpAuthKey)
+                            if "datetimeRsNtpProvToEpg" in datetimeNtpProv:
+                                if not_nan(datetimeNtpProv["datetimeRsNtpProvToEpg"]):
+                                    RsNtpProvToEpg = (
+                                        cobra.model.datetime.RsNtpProvToEpg(
+                                            NtpProv,
+                                            **datetimeNtpProv["datetimeRsNtpProvToEpg"],
+                                        )
+                                    )
+                                    self.config.addMo(RsNtpProvToEpg)
         except Exception as e:
             self._result.log = "[datetimePolError]: " + str(e)
 
@@ -799,33 +843,49 @@ class CobraClass:
         """
         Fabric > Fabric Policies > Policies > Pod > SNMP
         """
-
         try:
-            for item in value:
-                fabric_inst = cobra.model.fabric.Inst(self.__uni)
-                mo = cobra.model.snmp.Pol(fabric_inst, **item)
-                if "snmpClientGrpP" in item:
-                    for client_grp_p in item["snmpClientGrpP"]:
-                        mo_client_grp_p = cobra.model.snmp.ClientGrpP(
-                            mo, **client_grp_p
-                        )
-                        if "snmpRsEpg" in client_grp_p:
-                            cobra.model.snmp.RsEpg(
-                                mo_client_grp_p, **client_grp_p["snmpRsEpg"]
+            Inst = cobra.model.fabric.Inst(self.__uni)
+            for snmpPol in value:
+                Pol = cobra.model.snmp.Pol(Inst, **snmpPol)
+                self.config.addMo(Pol)
+                if "snmpClientGrpP" in snmpPol:
+                    for snmpClientGrpP in snmpPol["snmpClientGrpP"]:
+                        if not_nan(snmpClientGrpP):
+                            ClientGrpP = cobra.model.snmp.ClientGrpP(
+                                Pol, **snmpClientGrpP
                             )
-                        if "snmpClientP" in client_grp_p:
-                            for client_p in client_grp_p["snmpClientP"]:
-                                cobra.model.snmp.ClientP(mo_client_grp_p, **client_p)
-                if "snmpUserP" in item:
-                    for user_p in item["snmpUserP"]:
-                        cobra.model.snmp.UserP(mo, **user_p)
-                if "snmpCommunityP" in item:
-                    for community_p in item["snmpCommunityP"]:
-                        cobra.model.snmp.CommunityP(mo, **community_p)
-                if "snmpTrapFwdServerP" in item:
-                    for trap_fwd in item["snmpTrapFwdServerP"]:
-                        cobra.model.snmp.TrapFwdServerP(mo, **trap_fwd)
-                self.config.addMo(mo)
+                            if "snmpRsEpg" in snmpClientGrpP:
+                                if not_nan(snmpClientGrpP["snmpRsEpg"]):
+                                    RsEpg = cobra.model.snmp.RsEpg(
+                                        ClientGrpP, **snmpClientGrpP["snmpRsEpg"]
+                                    )
+                                    self.config.addMo(RsEpg)
+                            if "snmpClientP" in snmpClientGrpP:
+                                for snmpClientP in snmpClientGrpP["snmpClientP"]:
+                                    if not_nan(snmpClientP):
+                                        ClientP = cobra.model.snmp.ClientP(
+                                            ClientGrpP, **snmpClientP
+                                        )
+                                        self.config.addMo(ClientP)
+                if "snmpUserP" in snmpPol:
+                    for snmpUserP in snmpPol["snmpUserP"]:
+                        if not_nan(snmpUserP):
+                            UserP = cobra.model.snmp.UserP(Pol, **snmpUserP)
+                            self.config.addMo(UserP)
+                if "snmpCommunityP" in snmpPol:
+                    for snmpCommunityP in snmpPol["snmpCommunityP"]:
+                        if not_nan(snmpCommunityP):
+                            CommunityP = cobra.model.snmp.CommunityP(
+                                Pol, **snmpCommunityP
+                            )
+                            self.config.addMo(CommunityP)
+                if "snmpTrapFwdServerP" in snmpPol:
+                    for snmpTrapFwdServerP in snmpPol["snmpTrapFwdServerP"]:
+                        if not_nan(snmpTrapFwdServerP):
+                            TrapFwdServerP = cobra.model.snmp.TrapFwdServerP(
+                                Pol, **snmpTrapFwdServerP
+                            )
+                            self.config.addMo(TrapFwdServerP)
         except Exception as e:
             self._result.log = "[snmpPolError]: " + str(e)
 
@@ -834,20 +894,31 @@ class CobraClass:
         Fabric > Fabric Policies > Policies > Pod > Management Access
         """
         try:
-            for item in value:
-                fabric_inst = cobra.model.fabric.Inst(self.__uni)
-                mo = cobra.model.comm.Pol(fabric_inst, **item)
-                if "commTelnet" in item:
-                    cobra.model.comm.Telnet(mo, **item["commTelnet"])
-                if "commSsh" in item:
-                    cobra.model.comm.Ssh(mo, **item["commSsh"])
-                if "commShellinabox" in item:
-                    cobra.model.comm.Shellinabox(mo, **item["commShellinabox"])
-                if "commHttps" in item:
-                    cobra.model.comm.Https(mo, **item["commHttps"])
-                if "commHttp" in item:
-                    cobra.model.comm.Http(mo, **item["commHttp"])
-                self.config.addMo(mo)
+            Inst = cobra.model.fabric.Inst(self.__uni)
+            for commPol in value:
+                Pol = cobra.model.comm.Pol(Inst, **commPol)
+                if "commTelnet" in commPol:
+                    if not_nan(commPol["commTelnet"]):
+                        Telnet = cobra.model.comm.Telnet(Pol, **commPol["commTelnet"])
+                        self.config.addMo(Telnet)
+                if "commSsh" in commPol:
+                    if not_nan(commPol["commSsh"]):
+                        Ssh = cobra.model.comm.Ssh(Pol, **commPol["commSsh"])
+                        self.config.addMo(Ssh)
+                if "commHttp" in commPol:
+                    if not_nan(commPol["commHttp"]):
+                        Http = cobra.model.comm.Http(Pol, **commPol["commHttp"])
+                        self.config.addMo(Http)
+                if "commHttps" in commPol:
+                    if not_nan(commPol["commHttps"]):
+                        Https = cobra.model.comm.Https(Pol, **commPol["commHttps"])
+                        self.config.addMo(Https)
+                if "commShellinabox" in commPol:
+                    if not_nan(commPol["commShellinabox"]):
+                        Shellinabox = cobra.model.comm.Shellinabox(
+                            Pol, **commPol["commShellinabox"]
+                        )
+                        self.config.addMo(Shellinabox)
         except Exception as e:
             self._result.log = "[commPolError]: " + str(e)
 
@@ -1370,19 +1441,28 @@ class CobraClass:
         System Settings > All Tenants
         """
         try:
-            InstPol = cobra.model.bgp.InstPol(self.__fabric_inst, **value)
-            if "RRP" in value:
-                RRP = cobra.model.bgp.RRP(InstPol)
-                for item in value["RRP"]:
-                    mo = cobra.model.bgp.RRNodePEp(RRP, **item)
-                    self.config.addMo(mo)
-            if "ExtRRP" in value:
-                ExtRRP = cobra.model.bgp.ExtRRP(InstPol)
-                for item in value["ExtRRP"]:
-                    mo = cobra.model.bgp.RRNodePEp(ExtRRP, **item)
-                    self.config.addMo(mo)
+            for bgpInstPol in value:
+                InstPol = cobra.model.bgp.InstPol(self.__fabric_inst, **bgpInstPol)
+                if "bgpAsP" in bgpInstPol:
+                    if check("asn", bgpInstPol["bgpAsP"]):
+                        AsP = cobra.model.bgp.AsP(InstPol, **bgpInstPol["bgpAsP"])
+                        self.config.addMo(AsP)
+                if "bgpRRP" in bgpInstPol:
+                    RRP = cobra.model.bgp.RRP(InstPol)
+                    self.config.addMo(RRP)
+                    for bgpRRP in bgpInstPol["bgpRRP"]:
+                        if "bgpRRNodePEp" in bgpRRP:
+                            RRNodePEp = cobra.model.bgp.RRNodePEp(
+                                RRP, **bgpRRP["bgpRRNodePEp"]
+                            )
+                            self.config.addMo(RRNodePEp)
+                if "ExtRRP" in bgpInstPol:
+                    ExtRRP = cobra.model.bgp.ExtRRP(InstPol)
+                    for ExtRRP in bgpInstPol["ExtRRP"]:
+                        RRNodePEp = cobra.model.bgp.RRNodePEp(ExtRRP, **ExtRRP)
+                        self.config.addMo(RRNodePEp)
         except Exception as e:
-            self._result.log = "[bgpRRNodePEpError]: " + str(e)
+            self._result.log = "[bgpInstPolError]: " + str(e)
 
     def coopPol(self, value) -> None:
         """
@@ -1495,3 +1575,115 @@ class CobraClass:
             self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[infraPortTrackPolError]: " + str(e)
+
+    def mcpInstPol(self, value) -> None:
+        """
+        Fabric > Access Policies > Global > MCP Instance Policy default
+        """
+        try:
+            mo = cobra.model.mcp.InstPol(self.__infra, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[mcpInstPolPolError]: " + str(e)
+
+    def fabricNodeControl(self, value) -> None:
+        """
+        Fabric > Fabric Policies > Policies > Monitoring > Fabric Node Controls > default
+        """
+        try:
+            mo = cobra.model.fabric.NodeControl(self.__fabric_inst, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[fabricNodeControlError]: " + str(e)
+
+    def geoSite(self, value) -> None:
+        """
+        Fabric > Fabric Policies > Policies > Geolocation
+        """
+        try:
+            Inst = cobra.model.fabric.Inst(self.__uni)
+            for geoSite in value:
+                Site = cobra.model.geo.Site(Inst, **geoSite)
+                self.config.addMo(Site)
+                if "geoBuilding" in geoSite:
+                    for geoBuilding in geoSite["geoBuilding"]:
+                        Building = cobra.model.geo.Building(Site, **geoBuilding)
+                        self.config.addMo(Building)
+                        if "geoFloor" in geoBuilding:
+                            for geoFloor in geoBuilding["geoFloor"]:
+                                Floor = cobra.model.geo.Floor(Building, **geoFloor)
+                                self.config.addMo(Floor)
+                                if "geoRoom" in geoFloor:
+                                    for geoRoom in geoFloor["geoRoom"]:
+                                        Room = cobra.model.geo.Room(Floor, **geoRoom)
+                                        self.config.addMo(Room)
+                                        if "geoRow" in geoRoom:
+                                            for geoRow in geoRoom["geoRow"]:
+                                                Row = cobra.model.geo.Row(
+                                                    Room, **geoRow
+                                                )
+                                                self.config.addMo(Row)
+                                                if "geoRack" in geoRow:
+                                                    for geoRack in geoRow["geoRack"]:
+                                                        if check("name", geoRack):
+                                                            Rack = cobra.model.geo.Rack(
+                                                                Row, **geoRack
+                                                            )
+                                                            self.config.addMo(Rack)
+                                                            if (
+                                                                "geoRsNodeLocation"
+                                                                in geoRack
+                                                            ):
+                                                                for (
+                                                                    geoRsNodeLocation
+                                                                ) in geoRack[
+                                                                    "geoRsNodeLocation"
+                                                                ]:
+                                                                    if check(
+                                                                        "tDn",
+                                                                        geoRsNodeLocation,
+                                                                    ):
+                                                                        RsNodeLocation = cobra.model.geo.RsNodeLocation(
+                                                                            Rack,
+                                                                            **geoRsNodeLocation,
+                                                                        )
+                                                                        self.config.addMo(
+                                                                            RsNodeLocation
+                                                                        )
+        except Exception as e:
+            self._result.log = "[fabricNodeControlError]: " + str(e)
+
+    def latencyPtpMode(self, value) -> None:
+        """
+        Fabric > Fabric Policies > Policies > Monitoring > Fabric Node Controls > default
+        """
+        try:
+            mo = cobra.model.latency.PtpMode(self.__fabric_inst, **value)
+            self.config.addMo(mo)
+        except Exception as e:
+            self._result.log = "[latencyPtpModeError]: " + str(e)
+
+    def infrazoneZoneP(self, value) -> None:
+        """
+        Fabric > Fabric Policies > Policies > Monitoring > Fabric Node Controls > default
+        """
+        try:
+            ZoneP = cobra.model.infrazone.ZoneP(self.__infra, **value)
+            if "infrazoneZone" in value:
+                for infrazoneZone in value["infrazoneZone"]:
+                    if "name" in infrazoneZone:
+                        Zone = cobra.model.infrazone.Zone(ZoneP, **infrazoneZone)
+                        self.config.addMo(Zone)
+        except Exception as e:
+            self._result.log = "[infrazoneZoneError]: " + str(e)
+
+
+def check(key, value):
+    if key in value:
+        if not value[key] == "nan":
+            return True
+    return False
+
+
+def not_nan(value):
+    return not any(valor == "nan" for valor in value.values())

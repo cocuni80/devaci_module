@@ -191,7 +191,9 @@ class DeployClass:
         try:
             _jinja = JinjaClass()
             _cobra = CobraClass()
+            #print(self._variables)
             _jinja.render(template, **self._variables)
+            #print(_jinja.result.output)
             _cobra.render(_jinja.result)
             if _cobra.result.output:
                 if self.render_to_xml:
@@ -208,7 +210,7 @@ class DeployClass:
                 # self._result.log = "[RenderError]: No valid Cobra template."
                 self._result.success = False
                 self._result.log = {template.name: _cobra.result.log}
-                print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
+                print(f"\x1b[31;1m{_cobra.result.log} {template.name} error.\x1b[0m")
         except cobra.mit.request.CommitError as e:
             self._result.success = False
             msg = f"[RenderError]: Error validating {template.name}!. {str(e)}"
@@ -445,10 +447,12 @@ class DeployClass:
             for item in value:
                 try:
                     sheets = pd.read_excel(item, sheet_name=None)
-                    self._variables = self._variables | {
+                    sheets = {
                         sheet: df.to_dict(orient="records")
                         for sheet, df in sheets.items()
                     }
+                    self._variables = self._variables | sheets
+                    #print(self._variables)
                 except Exception as e:
                     msg = f"[XLSXException]: Error loading file!. {str(e)}"
                     print(f"\x1b[31;1m{msg}\x1b[0m")
