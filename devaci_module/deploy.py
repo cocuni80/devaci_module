@@ -194,7 +194,7 @@ class DeployClass:
             #print(self._variables)
             _jinja.render(template, **self._variables)
             #print(_jinja.result.output)
-            _cobra.render(_jinja.result)
+            _cobra.render(template, _jinja.result)
             if _cobra.result.output:
                 if self.render_to_xml:
                     self._result.output = {template.name: _cobra.result.output.xmldata}
@@ -210,7 +210,7 @@ class DeployClass:
                 # self._result.log = "[RenderError]: No valid Cobra template."
                 self._result.success = False
                 self._result.log = {template.name: _cobra.result.log}
-                print(f"\x1b[31;1m{_cobra.result.log} {template.name} error.\x1b[0m")
+                print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
         except cobra.mit.request.CommitError as e:
             self._result.success = False
             msg = f"[RenderError]: Error validating {template.name}!. {str(e)}"
@@ -230,7 +230,7 @@ class DeployClass:
             _jinja = JinjaClass()
             _cobra = CobraClass()
             _jinja.render(template, **self._variables)
-            _cobra.render(_jinja.result)
+            _cobra.render(template,_jinja.result)
             if _cobra.result.output:
                 if self.render_to_xml:
                     self._result.output = {template.name: _cobra.result.output.xmldata}

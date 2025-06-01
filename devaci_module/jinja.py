@@ -157,26 +157,26 @@ class JinjaClass:
             self._result.success = True
             self._result.log = "[JinjaClass]: Jinja template was sucessfully rendered."
         except ScannerError as e:
-            self._result.log = f"[ScannerError]: Syntax error {path.name}!. {str(e)}"
+            self._result.log = f"[ScannerError]: {path.name} error, {str(e)}"
             # print(f"\x1b[33;1m[ScannerError]: {str(e)}\x1b[0m")
         except jinja2.exceptions.TemplateSyntaxError as e:
             self._result.log = (
-                f"[TemplateSyntaxError]: Syntax error {path.name}!. {str(e)}"
+                f"[TemplateSyntaxError]: {path.name} error, {str(e)}"
             )
             # print(f"\x1b[33;1m[TemplateSyntaxError]: {str(e)}\x1b[0m")
         except jinja2.exceptions.UndefinedError as e:
             self._result.log = (
-                f"[UndefinedError]: Undefined error with {path.name}!. {str(e)}"
+                f"[UndefinedError]: {path.name} error, {str(e)}"
             )
             # print(f"\x1b[31;1m[UndefinedError]: {str(e)}\x1b[0m")
         except yaml.MarkedYAMLError as e:
             self._result.log = (
-                f"[MarkedYAMLError]: Syntax error  {path.name}!. {str(e)}"
+                f"[MarkedYAMLError]: {path.name} error, {str(e)}"
             )
             # print(f"\x1b[31;1m[MarkedYAMLError]: {str(e)}\x1b[0m")
         except Exception as e:
             self._result.log = (
-                f"[JinjaException]: Exepction with {path.name}!. {str(e)}"
+                f"[JinjaException]: {path.name} error, {str(e)}"
             )
             # print(f"\x1b[31;1m[JinjaException]: {str(e)}\x1b[0m")
 

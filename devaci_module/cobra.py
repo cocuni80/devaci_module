@@ -42,8 +42,10 @@ import cobra.model.pki
 import cobra.model.isis
 import cobra.model.latency
 import cobra.model.infrazone
+import cobra.model.mgmt
 from typing import Optional
 from datetime import datetime
+from pathlib import Path
 
 from .jinja import JinjaResult
 
@@ -132,7 +134,7 @@ class CobraClass:
         # --------------   ACI Information
         self.__root = ""
         self.__uni = cobra.model.pol.Uni(self.__root)
-        #elf.__uni.setConfigZone("PROD")
+        # elf.__uni.setConfigZone("PROD")
         self.__infra = cobra.model.infra.Infra(self.__uni)
         self.__fabric_inst = cobra.model.fabric.Inst(self.__uni)
         self.config = cobra.mit.request.ConfigRequest()
@@ -143,7 +145,7 @@ class CobraClass:
 
     # -------------------------------------------------   Control
 
-    def render(self, jinja: JinjaResult) -> CobraResult:
+    def render(self, path: Path, jinja: JinjaResult) -> CobraResult:
         try:
             if jinja.success and jinja.output:
                 for key, value in jinja.output.items():
@@ -152,24 +154,28 @@ class CobraClass:
                             caller = getattr(CobraClass, key)
                             caller(self, value)
                     except AttributeError as e:
-                        self._result.log = "[AttributeError]: " + str(e)
+                        self._result.log = (
+                            f"[AttributeError]: {path.name} error, {str(e)}"
+                        )
 
                 if self.config.configMos:
                     self._result.output = self.config
                     self._result.success = True
                     self._result.log = (
-                        "[CobraClass]: Template was sucessfully rendered."
+                        f"[CobraClass]: Template {path.name} was sucessfully rendered."
                     )
             else:
                 if not jinja.success:
                     self._result.log = jinja.log
                 else:
-                    self._result.log = "[CobraClass]: No valid data."
+                    self._result.log = (
+                        f"[CobraClass]: {path.name} error, no valid data."
+                    )
                 self._result.success = False
         except TypeError as e:
-            self._result.log = "[TypeError]: " + str(e)
+            self._result.log = f"[TypeError]: {path.name} error, {str(e)}"
         except Exception as e:
-            self._result.log = "[CobraError]: " + str(e)
+            self._result.log = f"[CobraError]: {path.name} error, {str(e)}"
 
     @property
     def result(self):
@@ -346,11 +352,80 @@ class CobraClass:
         """
         return self._mo
 
-    def tenant_address_pool(self, value):
+    def fvnsAddrInst(self, value):
         """
-        Tenants > IP Address Pools
+        Tenants > mgmt > IP Address Pools
         """
-        return self._mo
+        try:
+            for fvnsAddrInst in value:
+                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvnsAddrInst["tenant"])
+                AddrInst = cobra.model.fvns.AddrInst(Tenant, **fvnsAddrInst)
+                self.config.addMo(AddrInst)
+                if "fvnsUcastAddrBlk" in fvnsAddrInst:
+                    for fvnsUcastAddrBlk in fvnsAddrInst["fvnsUcastAddrBlk"]:
+                        if check("from", fvnsUcastAddrBlk):
+                            UcastAddrBlk = cobra.model.fvns.UcastAddrBlk(
+                                AddrInst, **fvnsUcastAddrBlk
+                            )
+                            self.config.addMo(UcastAddrBlk)
+        except Exception as e:
+            self._result.log = "[fvnsAddrInstError]: " + str(e)
+
+    def mgmtGrp(self, value):
+        """
+        Tenants > mgmt > Managed Node Connectivity Groups
+        """
+        try:
+            FuncP = cobra.model.infra.FuncP(self.__infra)
+            for mgmtGrp in value:
+                Grp = cobra.model.mgmt.Grp(FuncP, **mgmtGrp)
+                self.config.addMo(Grp)
+                if "mgmtOoBZone" in mgmtGrp:
+                    OoBZone = cobra.model.mgmt.OoBZone(Grp)
+                    if "mgmtRsOoB" in mgmtGrp["mgmtOoBZone"]:
+                        RsOoB = cobra.model.mgmt.RsOoB(
+                            OoBZone, **mgmtGrp["mgmtOoBZone"]["mgmtRsOoB"]
+                        )
+                        self.config.addMo(RsOoB)
+                    if "mgmtRsAddrInst" in mgmtGrp["mgmtOoBZone"]:
+                        RsAddrInst = cobra.model.mgmt.RsAddrInst(
+                            OoBZone, **mgmtGrp["mgmtOoBZone"]["mgmtRsAddrInst"]
+                        )
+                        self.config.addMo(RsAddrInst)
+                if "mgmtInBZone" in mgmtGrp:
+                    InBZone = cobra.model.mgmt.InBZone(Grp)
+                    if "mgmtRsInB" in mgmtGrp["mgmtInBZone"]:
+                        RsInB = cobra.model.mgmt.RsInB(
+                            InBZone, **mgmtGrp["mgmtInBZone"]["mgmtRsInB"]
+                        )
+                        self.config.addMo(RsInB)
+                    if "mgmtRsAddrInst" in mgmtGrp["mgmtInBZone"]:
+                        RsAddrInst = cobra.model.mgmt.RsAddrInst(
+                            InBZone, **mgmtGrp["mgmtInBZone"]["mgmtRsAddrInst"]
+                        )
+                        self.config.addMo(RsAddrInst)
+        except Exception as e:
+            self._result.log = "[mgmtGrpError]: " + str(e)
+
+    def mgmtNodeGrp(self, value):
+        """
+        Tenants > mgmt > Node Management Addresses
+        """
+        try:
+            for mgmtNodeGrp in value:
+                NodeGrp = cobra.model.mgmt.NodeGrp(self.__infra, **mgmtNodeGrp)
+                self.config.addMo(NodeGrp)
+                if "mgmtRsGrp" in mgmtNodeGrp:
+                    for mgmtRsGrp in mgmtNodeGrp["mgmtRsGrp"]:
+                        RsGrp = cobra.model.mgmt.RsGrp(NodeGrp, **mgmtRsGrp)
+                        self.config.addMo(RsGrp)
+                if "infraNodeBlk" in mgmtNodeGrp:
+                    for infraNodeBlk in mgmtNodeGrp["infraNodeBlk"]:
+                        if check("from_", infraNodeBlk):
+                            NodeBlk = cobra.model.infra.NodeBlk(NodeGrp, **infraNodeBlk)
+                            self.config.addMo(NodeBlk)
+        except Exception as e:
+            self._result.log = "[mgmtNodeGrpError]: " + str(e)
 
     def tenant_contract_standard(self, value):
         """
@@ -933,22 +1008,33 @@ class CobraClass:
         Fabric > Access Policies > Switches > Leaf Switches > Profiles
         """
         try:
-            for item in value:
-                mo = cobra.model.infra.NodeP(self.__infra, **item)
-                if "infraLeafS" in item:
-                    for leaf_s in item["infraLeafS"]:
-                        mo_leaf_s = cobra.model.infra.LeafS(mo, **leaf_s)
-                        if "infraRsAccNodePGrp" in leaf_s:
-                            cobra.model.infra.RsAccNodePGrp(
-                                mo_leaf_s, **leaf_s["infraRsAccNodePGrp"]
+            for infraNodeP in value:
+                NodeP = cobra.model.infra.NodeP(self.__infra, **infraNodeP)
+                self.config.addMo(NodeP)
+                if "infraLeafS" in infraNodeP:
+                    for infraLeafS in infraNodeP["infraLeafS"]:
+                        if check("name", infraLeafS):
+                            LeafS = cobra.model.infra.LeafS(NodeP, **infraLeafS)
+                            self.config.addMo(LeafS)
+                            if "infraNodeBlk" in infraLeafS:
+                                if check("from_", infraLeafS["infraNodeBlk"]):
+                                    NodeBlk = cobra.model.infra.NodeBlk(
+                                        LeafS, **infraLeafS["infraNodeBlk"]
+                                    )
+                                    self.config.addMo(NodeBlk)
+                            if "infraRsAccNodePGrp" in infraLeafS:
+                                if check("tDn", infraLeafS["infraRsAccNodePGrp"]):
+                                    RsAccNodePGrp = cobra.model.infra.RsAccNodePGrp(
+                                        LeafS, **infraLeafS["infraRsAccNodePGrp"]
+                                    )
+                                    self.config.addMo(RsAccNodePGrp)
+                if "infraRsAccPortP" in infraNodeP:
+                    for infraRsAccPortP in infraNodeP["infraRsAccPortP"]:
+                        if check("tDn", infraRsAccPortP):
+                            RsAccPortP = cobra.model.infra.RsAccPortP(
+                                NodeP, **infraRsAccPortP
                             )
-                        if "infraNodeBlk" in leaf_s:
-                            cobra.model.infra.NodeBlk(
-                                mo_leaf_s, **leaf_s["infraNodeBlk"]
-                            )
-                if "infraRsAccPortP" in item:
-                    cobra.model.infra.RsAccPortP(mo, **item["infraRsAccPortP"])
-                self.config.addMo(mo)
+                            self.config.addMo(RsAccPortP)
         except Exception as e:
             self._result.log = "[infraNodePError]: " + str(e)
 
@@ -957,70 +1043,212 @@ class CobraClass:
         Fabric > Access Policies > Switches > Leaf Switches > Policy Groups
         """
         try:
-            for item in value:
-                funcp = cobra.model.infra.FuncP(self.__infra)
-                mo = cobra.model.infra.AccNodePGrp(funcp, **item)
-                if "infraRsMstInstPol" in item:
-                    cobra.model.infra.RsMstInstPol(mo, **item["infraRsMstInstPol"])
-                if "infraRsBfdIpv4InstPol" in item:
-                    cobra.model.infra.RsBfdIpv4InstPol(
-                        mo, **item["infraRsBfdIpv4InstPol"]
-                    )
-                if "infraRsBfdIpv6InstPol" in item:
-                    cobra.model.infra.RsBfdIpv6InstPol(
-                        mo, **item["infraRsBfdIpv6InstPol"]
-                    )
-                if "infraRsBfdMhIpv4InstPol" in item:
-                    cobra.model.infra.RsBfdMhIpv4InstPol(
-                        mo, **item["infraRsBfdMhIpv4InstPol"]
-                    )
-                if "infraRsBfdMhIpv6InstPol" in item:
-                    cobra.model.infra.RsBfdMhIpv6InstPol(
-                        mo, **item["infraRsBfdMhIpv6InstPol"]
-                    )
-                if "infraRsFcInstPol" in item:
-                    cobra.model.infra.RsFcInstPol(mo, **item["infraRsFcInstPol"])
-                if "infraRsPoeInstPol" in item:
-                    cobra.model.infra.RsPoeInstPol(mo, **item["infraRsPoeInstPol"])
-                if "infraRsFcFabricPol" in item:
-                    cobra.model.infra.RsFcFabricPol(mo, **item["infraRsFcFabricPol"])
-                if "infraRsMonNodeInfraPol" in item:
-                    cobra.model.infra.RsMonNodeInfraPol(
-                        mo, **item["infraRsMonNodeInfraPol"]
-                    )
-                if "infraRsLeafCoppProfile" in item:
-                    cobra.model.infra.RsLeafCoppProfile(
-                        mo, **item["infraRsLeafCoppProfile"]
-                    )
-                if "infraRsTopoctrlFwdScaleProfPol" in item:
-                    cobra.model.infra.RsTopoctrlFwdScaleProfPol(
-                        mo, **item["infraRsTopoctrlFwdScaleProfPol"]
-                    )
-                if "infraRsTopoctrlFastLinkFailoverInstPol" in item:
-                    cobra.model.infra.RsTopoctrlFastLinkFailoverInstPol(
-                        mo, **item["infraRsTopoctrlFastLinkFailoverInstPol"]
-                    )
-                if "infraRsL2NodeAuthPol" in item:
-                    cobra.model.infra.RsL2NodeAuthPol(
-                        mo, **item["infraRsL2NodeAuthPol"]
-                    )
-                if "infraRsIaclLeafProfile" in item:
-                    cobra.model.infra.RsIaclLeafProfile(
-                        mo, **item["infraRsIaclLeafProfile"]
-                    )
-                if "infraRsEquipmentFlashConfigPol" in item:
-                    cobra.model.infra.RsEquipmentFlashConfigPol(
-                        mo, **item["infraRsEquipmentFlashConfigPol"]
-                    )
-                if "infraRsLeafPGrpToCdpIfPol" in item:
-                    cobra.model.infra.RsLeafPGrpToCdpIfPol(
-                        mo, **item["infraRsLeafPGrpToCdpIfPol"]
-                    )
-                if "infraRsLeafPGrpToLldpIfPol" in item:
-                    cobra.model.infra.RsLeafPGrpToLldpIfPol(
-                        mo, **item["infraRsLeafPGrpToLldpIfPol"]
-                    )
-                self.config.addMo(mo)
+            FuncP = cobra.model.infra.FuncP(self.__infra)
+            for infraAccNodePGrp in value:
+                AccNodePGrp = cobra.model.infra.AccNodePGrp(FuncP, **infraAccNodePGrp)
+                self.config.addMo(AccNodePGrp)
+                if "infraRsTopoctrlFwdScaleProfPol" in infraAccNodePGrp:
+                    if check(
+                        "tnTopoctrlFwdScaleProfilePolName",
+                        infraAccNodePGrp["infraRsTopoctrlFwdScaleProfPol"],
+                    ):
+                        RsTopoctrlFwdScaleProfPol = (
+                            cobra.model.infra.RsTopoctrlFwdScaleProfPol(
+                                AccNodePGrp,
+                                **infraAccNodePGrp["infraRsTopoctrlFwdScaleProfPol"],
+                            )
+                        )
+                        self.config.addMo(RsTopoctrlFwdScaleProfPol)
+                if "infraRsLeafTopoctrlUsbConfigProfilePol" in infraAccNodePGrp:
+                    if check(
+                        "tnTopoctrlUsbConfigProfilePolName",
+                        infraAccNodePGrp["infraRsLeafTopoctrlUsbConfigProfilePol"],
+                    ):
+                        RsLeafTopoctrlUsbConfigProfilePol = (
+                            cobra.model.infra.RsLeafTopoctrlUsbConfigProfilePol(
+                                AccNodePGrp,
+                                **infraAccNodePGrp[
+                                    "infraRsLeafTopoctrlUsbConfigProfilePol"
+                                ],
+                            )
+                        )
+                        self.config.addMo(RsLeafTopoctrlUsbConfigProfilePol)
+                if "infraRsLeafPGrpToLldpIfPol" in infraAccNodePGrp:
+                    if check(
+                        "tnLldpIfPolName",
+                        infraAccNodePGrp["infraRsLeafPGrpToLldpIfPol"],
+                    ):
+                        RsLeafPGrpToLldpIfPol = cobra.model.infra.RsLeafPGrpToLldpIfPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsLeafPGrpToLldpIfPol"],
+                        )
+                        self.config.addMo(RsLeafPGrpToLldpIfPol)
+                if "infraRsBfdIpv6InstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnBfdIpv6InstPolName",
+                        infraAccNodePGrp["infraRsBfdIpv6InstPol"],
+                    ):
+                        RsBfdIpv6InstPol = cobra.model.infra.RsBfdIpv6InstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsBfdIpv6InstPol"],
+                        )
+                        self.config.addMo(RsBfdIpv6InstPol)
+                if "infraRsSynceInstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnSynceInstPolName",
+                        infraAccNodePGrp["infraRsSynceInstPol"],
+                    ):
+                        RsSynceInstPol = cobra.model.infra.RsSynceInstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsSynceInstPol"],
+                        )
+                        self.config.addMo(RsSynceInstPol)
+                if "infraRsPoeInstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnPoeInstPolName",
+                        infraAccNodePGrp["infraRsPoeInstPol"],
+                    ):
+                        RsPoeInstPol = cobra.model.infra.RsPoeInstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsPoeInstPol"],
+                        )
+                        self.config.addMo(RsPoeInstPol)
+                if "infraRsBfdMhIpv4InstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnBfdMhIpv4InstPolName",
+                        infraAccNodePGrp["infraRsBfdMhIpv4InstPol"],
+                    ):
+                        RsBfdMhIpv4InstPol = cobra.model.infra.RsBfdMhIpv4InstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsBfdMhIpv4InstPol"],
+                        )
+                        self.config.addMo(RsBfdMhIpv4InstPol)
+                if "infraRsBfdMhIpv6InstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnBfdMhIpv6InstPolName",
+                        infraAccNodePGrp["infraRsBfdMhIpv6InstPol"],
+                    ):
+                        RsBfdMhIpv6InstPol = cobra.model.infra.RsBfdMhIpv6InstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsBfdMhIpv6InstPol"],
+                        )
+                        self.config.addMo(RsBfdMhIpv6InstPol)
+                if "infraRsEquipmentFlashConfigPol" in infraAccNodePGrp:
+                    if check(
+                        "tnEquipmentFlashConfigPolName",
+                        infraAccNodePGrp["infraRsEquipmentFlashConfigPol"],
+                    ):
+                        RsEquipmentFlashConfigPol = (
+                            cobra.model.infra.RsEquipmentFlashConfigPol(
+                                AccNodePGrp,
+                                **infraAccNodePGrp["infraRsEquipmentFlashConfigPol"],
+                            )
+                        )
+                        self.config.addMo(RsEquipmentFlashConfigPol)
+                if "infraRsMonNodeInfraPol" in infraAccNodePGrp:
+                    if check(
+                        "tnMonInfraPolName",
+                        infraAccNodePGrp["infraRsMonNodeInfraPol"],
+                    ):
+                        RsMonNodeInfraPol = cobra.model.infra.RsMonNodeInfraPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsMonNodeInfraPol"],
+                        )
+                        self.config.addMo(RsMonNodeInfraPol)
+                if "infraRsFcInstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnFcInstPolName",
+                        infraAccNodePGrp["infraRsFcInstPol"],
+                    ):
+                        RsFcInstPol = cobra.model.infra.RsFcInstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsFcInstPol"],
+                        )
+                        self.config.addMo(RsFcInstPol)
+                if "infraRsTopoctrlFastLinkFailoverInstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnTopoctrlFastLinkFailoverInstPolName",
+                        infraAccNodePGrp["infraRsTopoctrlFastLinkFailoverInstPol"],
+                    ):
+                        RsTopoctrlFastLinkFailoverInstPol = (
+                            cobra.model.infra.RsTopoctrlFastLinkFailoverInstPol(
+                                AccNodePGrp,
+                                **infraAccNodePGrp[
+                                    "infraRsTopoctrlFastLinkFailoverInstPol"
+                                ],
+                            )
+                        )
+                        self.config.addMo(RsTopoctrlFastLinkFailoverInstPol)
+                if "infraRsMstInstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnStpInstPolName",
+                        infraAccNodePGrp["infraRsMstInstPol"],
+                    ):
+                        RsMstInstPol = cobra.model.infra.RsMstInstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsMstInstPol"],
+                        )
+                        self.config.addMo(RsMstInstPol)
+                if "infraRsFcFabricPol" in infraAccNodePGrp:
+                    if check(
+                        "tnFcFabricPolName",
+                        infraAccNodePGrp["infraRsFcFabricPol"],
+                    ):
+                        RsFcFabricPol = cobra.model.infra.RsFcFabricPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsFcFabricPol"],
+                        )
+                        self.config.addMo(RsFcFabricPol)
+                if "infraRsLeafCoppProfile" in infraAccNodePGrp:
+                    if check(
+                        "tnCoppLeafProfileName",
+                        infraAccNodePGrp["infraRsLeafCoppProfile"],
+                    ):
+                        RsLeafCoppProfile = cobra.model.infra.RsLeafCoppProfile(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsLeafCoppProfile"],
+                        )
+                        self.config.addMo(RsLeafCoppProfile)
+                if "infraRsIaclLeafProfile" in infraAccNodePGrp:
+                    if check(
+                        "tnIaclLeafProfileName",
+                        infraAccNodePGrp["infraRsIaclLeafProfile"],
+                    ):
+                        RsIaclLeafProfile = cobra.model.infra.RsIaclLeafProfile(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsIaclLeafProfile"],
+                        )
+                        self.config.addMo(RsIaclLeafProfile)
+                if "infraRsBfdIpv4InstPol" in infraAccNodePGrp:
+                    if check(
+                        "tnBfdIpv4InstPolName",
+                        infraAccNodePGrp["infraRsBfdIpv4InstPol"],
+                    ):
+                        RsBfdIpv4InstPol = cobra.model.infra.RsBfdIpv4InstPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsBfdIpv4InstPol"],
+                        )
+                        self.config.addMo(RsBfdIpv4InstPol)
+                if "infraRsL2NodeAuthPol" in infraAccNodePGrp:
+                    if check(
+                        "tnL2NodeAuthPolName",
+                        infraAccNodePGrp["infraRsL2NodeAuthPol"],
+                    ):
+                        RsL2NodeAuthPol = cobra.model.infra.RsL2NodeAuthPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsL2NodeAuthPol"],
+                        )
+                        self.config.addMo(RsL2NodeAuthPol)
+                if "infraRsLeafPGrpToCdpIfPol" in infraAccNodePGrp:
+                    if check(
+                        "tnCdpIfPolName",
+                        infraAccNodePGrp["infraRsLeafPGrpToCdpIfPol"],
+                    ):
+                        RsLeafPGrpToCdpIfPol = cobra.model.infra.RsLeafPGrpToCdpIfPol(
+                            AccNodePGrp,
+                            **infraAccNodePGrp["infraRsLeafPGrpToCdpIfPol"],
+                        )
+                        self.config.addMo(RsLeafPGrpToCdpIfPol)
         except Exception as e:
             self._result.log = "[infraAccNodePGrpError]: " + str(e)
 
@@ -1134,19 +1362,26 @@ class CobraClass:
         Fabric > Access Policies > Interfaces > Leaf Interfaces > Profiles
         """
         try:
-            for item in value:
-                mo = cobra.model.infra.AccPortP(self.__infra, **item)
-                if "infraHPortS" in item:
-                    for port_s in item["infraHPortS"]:
-                        h_port_s = cobra.model.infra.HPortS(mo, **port_s)
-                        if "infraRsAccBaseGrp" in port_s:
-                            cobra.model.infra.RsAccBaseGrp(
-                                h_port_s, **port_s["infraRsAccBaseGrp"]
-                            )
-                        if "infraPortBlk" in port_s:
-                            for block in port_s["infraPortBlk"]:
-                                cobra.model.infra.PortBlk(h_port_s, **block)
-                self.config.addMo(mo)
+            for infraAccPortP in value:
+                AccPortP = cobra.model.infra.AccPortP(self.__infra, **infraAccPortP)
+                self.config.addMo(AccPortP)
+                if "infraHPortS" in infraAccPortP:
+                    for infraHPortS in infraAccPortP["infraHPortS"]:
+                        HPortS = cobra.model.infra.HPortS(AccPortP, **infraHPortS)
+                        self.config.addMo(HPortS)
+                        if "infraRsAccBaseGrp" in infraHPortS:
+                            if check("tDn", infraHPortS["infraRsAccBaseGrp"]):
+                                RsAccBaseGrp = cobra.model.infra.RsAccBaseGrp(
+                                    HPortS, **infraHPortS["infraRsAccBaseGrp"]
+                                )
+                                self.config.addMo(RsAccBaseGrp)
+                        if "infraPortBlk" in infraHPortS:
+                            for infraPortBlk in infraHPortS["infraPortBlk"]:
+                                if check("fromPort", infraPortBlk):
+                                    PortBlk = cobra.model.infra.PortBlk(
+                                        HPortS, **infraPortBlk
+                                    )
+                                    self.config.addMo(PortBlk)
         except Exception as e:
             self._result.log = "[infraAccPortPError]: " + str(e)
 
