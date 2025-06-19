@@ -191,8 +191,10 @@ class DeployClass:
         try:
             _jinja = JinjaClass()
             _cobra = CobraClass()
+            #print(self._variables)
             _jinja.render(template, **self._variables)
-            _cobra.render(_jinja.result)
+            #print(_jinja.result.output)
+            _cobra.render(template, _jinja.result)
             if _cobra.result.output:
                 if self.render_to_xml:
                     self._result.output = {template.name: _cobra.result.output.xmldata}
@@ -228,7 +230,7 @@ class DeployClass:
             _jinja = JinjaClass()
             _cobra = CobraClass()
             _jinja.render(template, **self._variables)
-            _cobra.render(_jinja.result)
+            _cobra.render(template,_jinja.result)
             if _cobra.result.output:
                 if self.render_to_xml:
                     self._result.output = {template.name: _cobra.result.output.xmldata}
@@ -445,10 +447,12 @@ class DeployClass:
             for item in value:
                 try:
                     sheets = pd.read_excel(item, sheet_name=None)
-                    self._variables = self._variables | {
+                    sheets = {
                         sheet: df.to_dict(orient="records")
                         for sheet, df in sheets.items()
                     }
+                    self._variables = self._variables | sheets
+                    #print(self._variables)
                 except Exception as e:
                     msg = f"[XLSXException]: Error loading file!. {str(e)}"
                     print(f"\x1b[31;1m{msg}\x1b[0m")
