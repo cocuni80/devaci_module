@@ -236,8 +236,8 @@ class CobraClass:
                                 self.config.addMo(RsDomAtt)
                         if "fvRsPathAtt" in fvAEPg:
                             for fvRsPathAtt in fvAEPg["fvRsPathAtt"]:
-                                fvRsPathAtt = cobra.model.fv.fvRsPathAtt(AEPg, **fvRsPathAtt)
-                                self.config.addMo(fvRsPathAtt)
+                                RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
+                                self.config.addMo(RsPathAtt)
         except Exception as e:
             self._result.log = "[fvApError]: " + str(e)
         return self._mo
@@ -247,17 +247,22 @@ class CobraClass:
         Tenants > Application Profiles > Application EPGs
         """
         try:
-            for item in value:
-                mo = cobra.model.fv.AEPg(self.ap(**item), **item)
-                if "fvRsBd" in item:
-                    cobra.model.fv.RsBd(mo, **item["fvRsBd"])
-                if "fvRsDomAtt" in item:
-                    for rs_dom_att in item["fvRsDomAtt"]:
-                        cobra.model.fv.RsDomAtt(mo, **rs_dom_att)
-                if "fvRsPathAtt" in item:
-                    for rs_path_att in item["fvRsPathAtt"]:
-                        cobra.model.fv.RsPathAtt(mo, **rs_path_att)
-                self.config.addMo(mo)
+            for fvAEPg in value:
+                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvAEPg["tenant"])
+                Ap = cobra.model.fv.Ap(Tenant, name=fvAEPg["ap"])
+                AEPg = cobra.model.fv.AEPg(Ap, **fvAEPg)
+                self.config.addMo(AEPg)
+                if "fvRsBd" in fvAEPg:
+                    RsBd = cobra.model.fv.RsBd(AEPg, **fvAEPg["fvRsBd"])
+                    self.config.addMo(RsBd)
+                if "fvRsDomAtt" in fvAEPg:
+                    for fvRsDomAtt in fvAEPg["fvRsDomAtt"]:
+                        RsDomAtt = cobra.model.fv.RsDomAtt(AEPg, **fvRsDomAtt)
+                        self.config.addMo(RsDomAtt)
+                if "fvRsPathAtt" in fvAEPg:
+                    for fvRsPathAtt in fvAEPg["fvRsPathAtt"]:
+                        RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
+                        self.config.addMo(RsPathAtt)
         except Exception as e:
             self._result.log = "[fvAEPgError]: " + str(e)
     
