@@ -110,6 +110,7 @@ class DeployClass:
         self.testing = kwargs.get("testing", False)
         self.logging = kwargs.get("logging", False)
         self.render_to_xml = kwargs.get("render_to_xml", False)
+        self.render_vars = kwargs.get("render_vars", False)
 
         # --------------   Controller Information
         self._ip = kwargs.get("ip", "127.0.0.1")
@@ -125,6 +126,7 @@ class DeployClass:
         )
         self.__modir = cobra.mit.access.MoDirectory(self._session)
         self._variables: dict = {}
+        self._vars: list = []
         # self._path: Path = None
 
         self._result = DeployResult()
@@ -274,6 +276,42 @@ class DeployClass:
         if self.logging:
             self.record()
 
+    def render_variables(self) -> None:
+        """
+        Render variables
+        """
+        try:
+            input = self._variables.copy()
+            temp1 = dict()
+            if input.get("vars"):
+                for var in input["vars"]:
+                    temp1[var["name"]] = var
+            else:
+                raise Exception("No 'vars' key found!")
+
+            input.pop("summary")
+            input.pop("vars")
+
+            output = dict()
+            for key, value in input.items():
+                temp3 = list()
+                for value_dict in value:
+                    for var in self._vars:
+                        if var in value_dict:
+                            value_dict[var] = temp1.get(value_dict.get(var), None)
+                        else:
+                            raise Exception(f"No {var} variable found on {key} key!")
+                    temp3.append(value_dict)
+                output[key] = temp3
+            self._variables = output
+            #print(f"{self._variables}")
+
+        except Exception as e:
+            self._result.success = False
+            msg = f"[VarsError]: Error rendering vars!. {str(e)}"
+            self._result.log = {"variables": msg}
+            print(f"\x1b[31;1m{msg}\x1b[0m")
+
     def deploy(self) -> None:
         """
         Deploy configuration
@@ -284,6 +322,8 @@ class DeployClass:
             self._result.log = {"render": msg} if self.testing else {"deploy": msg}
             print(f"\x1b[31;1m{msg}\x1b[0m")
             return
+        if self.render_vars:
+            self.render_variables()
 
         if self.testing:
             for temp in self._template:
@@ -384,6 +424,10 @@ class DeployClass:
         return self._variables
 
     @property
+    def vars(self):
+        return self._vars
+
+    @property
     def template(self) -> list[Path]:
         """
         Define your template:
@@ -406,6 +450,13 @@ class DeployClass:
         Show XLSX file path.
         """
         return self._path
+
+    @vars.setter
+    def vars(self, value) -> None:
+        """
+        Insert vars list to list of Variables
+        """
+        self._vars = value
 
     @template.setter
     def template(self, value) -> None:
