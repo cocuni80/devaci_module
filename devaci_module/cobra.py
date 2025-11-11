@@ -138,7 +138,7 @@ class CobraClass:
         # --------------   ACI Information
         self.__root = ""
         self.__uni = cobra.model.pol.Uni(self.__root)
-        # elf.__uni.setConfigZone("PROD")
+        # self.__uni.setConfigZone("PROD")
         self.__infra = cobra.model.infra.Infra(self.__uni)
         self.__fabric_inst = cobra.model.fabric.Inst(self.__uni)
         self.config = cobra.mit.request.ConfigRequest()
@@ -279,7 +279,7 @@ class CobraClass:
                 if "fvAEPg" in fvAp:
                     for fvAEPg in fvAp["fvAEPg"]:
                         AEPg = cobra.model.fv.AEPg(Ap, **fvAEPg)
-                        self.config.addMo(AEPg)
+                        #self.config.addMo(AEPg)
                         if "fvRsPathAtt" in fvAEPg:
                             for fvRsPathAtt in fvAEPg["fvRsPathAtt"]:
                                 RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
