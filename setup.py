@@ -18,7 +18,7 @@ INSTALL_REQUIRES = [
 
 setuptools.setup(
     name="devaci_module",
-    version="1.4.3",
+    version="1.4.4",
     author="Jorge Riveros",
     author_email="christian.riveros@outlook.com",
     license="MIT",
