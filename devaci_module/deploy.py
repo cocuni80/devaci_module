@@ -387,7 +387,28 @@ class DeployClass:
                         )
                     )
 
-    def save_output(self) -> None:
+    def save_output(self, name: str = "template") -> None:
+        """
+        Save indent Output in pretty format
+        """
+        if self._result.output:
+            for key, value in self._result.output.items():
+                msg = f"-> Output saved at {Path(key).with_suffix('.xml' if self.render_to_xml else '.json').absolute()}"
+                print(f"\x1b[33;1m{msg}\x1b[0m")
+
+                if self.render_to_xml:
+                    dom = xml.dom.minidom.parseString(value)
+                    pretty_xml = dom.toprettyxml(indent="\t")
+                    file = Path(key).with_suffix(".xml")
+                    with open(file, "w", encoding="utf-8") as f:
+                        f.write(pretty_xml)
+                else:
+                    pretty_json = json.dumps(value, indent=4, ensure_ascii=False)
+                    file = Path(key).with_suffix(".json")
+                    with open(file, "w", encoding="utf-8") as f:
+                        f.write(pretty_json)
+    
+    def save_output2(self, name: list = None) -> None:
         """
         Save indent Output in pretty format
         """

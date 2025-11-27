@@ -236,7 +236,9 @@ class CobraClass:
                                 self.config.addMo(RsDomAtt)
                         if "fvRsPathAtt" in fvAEPg:
                             for fvRsPathAtt in fvAEPg["fvRsPathAtt"]:
-                                RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
+                                RsPathAtt = cobra.model.fv.RsPathAtt(
+                                    AEPg, **fvRsPathAtt
+                                )
                                 self.config.addMo(RsPathAtt)
         except Exception as e:
             self._result.log = "[fvApError]: " + str(e)
@@ -249,7 +251,7 @@ class CobraClass:
         try:
             for fvAEPg in value:
                 Tenant = cobra.model.fv.Tenant(self.__uni, name=fvAEPg["tenant"])
-                Ap = cobra.model.fv.Ap(Tenant, name=fvAEPg["ap"])
+                Ap = cobra.model.fv.Ap(Tenant, name=fvAEPg["fvApName"])
                 AEPg = cobra.model.fv.AEPg(Ap, **fvAEPg)
                 self.config.addMo(AEPg)
                 if "fvRsBd" in fvAEPg:
@@ -265,27 +267,47 @@ class CobraClass:
                         self.config.addMo(RsPathAtt)
         except Exception as e:
             self._result.log = "[fvAEPgError]: " + str(e)
-    
-    def addPath(self, value) -> None:
+
+    def staticPath(self, value) -> None:
         """
         Tenants > Application Profiles > Application EPGs > EPG Name > Static Ports
         """
         try:
             for fvAp in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvAp["tenant"], status="modified")
+                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvAp["tenant"])
                 self.config.addMo(Tenant)
                 Ap = cobra.model.fv.Ap(Tenant, **fvAp)
                 self.config.addMo(Ap)
                 if "fvAEPg" in fvAp:
                     for fvAEPg in fvAp["fvAEPg"]:
                         AEPg = cobra.model.fv.AEPg(Ap, **fvAEPg)
-                        #self.config.addMo(AEPg)
+                        # self.config.addMo(AEPg)
                         if "fvRsPathAtt" in fvAEPg:
                             for fvRsPathAtt in fvAEPg["fvRsPathAtt"]:
-                                RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
+                                RsPathAtt = cobra.model.fv.RsPathAtt(
+                                    AEPg, **fvRsPathAtt
+                                )
                                 self.config.addMo(RsPathAtt)
         except Exception as e:
             self._result.log = "[fvApError]: " + str(e)
+        return self._mo
+
+    def fvRsPathAtt(self, value) -> None:
+        """
+        Tenants > Application Profiles > Application EPGs > EPG Name > Static Ports
+        """
+        try:
+            for fvRsPathAtt in value:
+                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvRsPathAtt["tenant"])
+                self.config.addMo(Tenant)
+                Ap = cobra.model.fv.Ap(Tenant, name=fvRsPathAtt["fvApName"])
+                self.config.addMo(Ap)
+                AEPg = cobra.model.fv.AEPg(Ap, name=fvRsPathAtt["fvAEPgName"])
+                self.config.addMo(AEPg)
+                RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
+                self.config.addMo(RsPathAtt)
+        except Exception as e:
+            self._result.log = "[fvRsPathAttError]: " + str(e)
         return self._mo
 
     def tenant_application_uepg(self, value) -> None:
@@ -818,7 +840,9 @@ class CobraClass:
             OOServicePol = cobra.model.fabric.OOServicePol(Inst)
             self.config.addMo(OOServicePol)
             for fabricRsOosPath in value:
-                RsOosPath = cobra.model.fabric.RsOosPath(OOServicePol, **fabricRsOosPath)
+                RsOosPath = cobra.model.fabric.RsOosPath(
+                    OOServicePol, **fabricRsOosPath
+                )
                 self.config.addMo(RsOosPath)
         except Exception as e:
             self._result.log = "[fabricRsOosPathError]: " + str(e)

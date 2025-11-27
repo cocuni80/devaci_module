@@ -132,5 +132,8 @@ pnpm-debug.log*
 /testing
 /formats
 notes.txt
-requirements.txt
 test.py
+
+#Outputs
+*.xml
+*.json
