@@ -2207,8 +2207,9 @@ class CobraClass:
         Fabric > Access Policies > Global > MCP Instance Policy default
         """
         try:
-            mo = cobra.model.mcp.InstPol(self.__infra, **value)
-            self.config.addMo(mo)
+            for mcpInstPol in value:
+                mo = cobra.model.mcp.InstPol(self.__infra, **mcpInstPol)
+                self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[mcpInstPolPolError]: " + str(e)
 
@@ -2217,8 +2218,9 @@ class CobraClass:
         Fabric > Fabric Policies > Policies > Monitoring > Fabric Node Controls > default
         """
         try:
-            mo = cobra.model.fabric.NodeControl(self.__fabric_inst, **value)
-            self.config.addMo(mo)
+            for fabricNodeControl in value:
+                mo = cobra.model.fabric.NodeControl(self.__fabric_inst, **fabricNodeControl)
+                self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[fabricNodeControlError]: " + str(e)
 
