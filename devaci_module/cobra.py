@@ -139,8 +139,6 @@ class CobraClass:
         self.__root = ""
         self.__uni = cobra.model.pol.Uni(self.__root)
         # self.__uni.setConfigZone("PROD")
-        self.__infra = cobra.model.infra.Infra(self.__uni)
-        self.__fabric_inst = cobra.model.fabric.Inst(self.__uni)
         self.config = cobra.mit.request.ConfigRequest()
 
         # --------------   Output Information
@@ -158,23 +156,17 @@ class CobraClass:
                             caller = getattr(CobraClass, key)
                             caller(self, value)
                     except AttributeError as e:
-                        self._result.log = (
-                            f"[AttributeError]: {path.name} error, {str(e)}"
-                        )
+                        self._result.log = f"[AttributeError]: {path.name} error, {str(e)}"
 
                 if self.config.configMos:
                     self._result.output = self.config
                     self._result.success = True
-                    self._result.log = (
-                        f"[CobraClass]: Template {path.name} was sucessfully rendered."
-                    )
+                    self._result.log = f"[CobraClass]: Template {path.name} was sucessfully rendered."
             else:
                 if not jinja.success:
                     self._result.log = jinja.log
                 else:
-                    self._result.log = (
-                        f"[CobraClass]: {path.name} error, no valid data."
-                    )
+                    self._result.log = f"[CobraClass]: {path.name} error, no valid data."
                 self._result.success = False
         except TypeError as e:
             self._result.log = f"[TypeError]: {path.name} error, {str(e)}"
@@ -189,8 +181,9 @@ class CobraClass:
 
     def tenant(self, **item):
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             if "tenant" in item:
-                return cobra.model.fv.Tenant(self.__uni, name=item["tenant"])
+                return cobra.model.fv.Tenant(Uni, name=item["tenant"])
         except Exception as e:
             self._result.log = "[tenantError]: " + str(e)
 
@@ -208,9 +201,10 @@ class CobraClass:
         Tenants > All Tenants
         """
         try:
-            for item in value:
-                mo = cobra.model.fv.Tenant(self.__uni, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            for fvTenant in value:
+                Tenant = cobra.model.fv.Tenant(Uni, **fvTenant)
+                self.config.addMo(Tenant)
         except Exception as e:
             self._result.log = "[fvTenantError]: " + str(e)
 
@@ -219,8 +213,9 @@ class CobraClass:
         Tenants > Application Profiles
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for fvAp in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvAp["tenant"])
+                Tenant = cobra.model.fv.Tenant(Uni, name=fvAp["tenant"])
                 Ap = cobra.model.fv.Ap(Tenant, **fvAp)
                 self.config.addMo(Ap)
                 if "fvAEPg" in fvAp:
@@ -236,9 +231,7 @@ class CobraClass:
                                 self.config.addMo(RsDomAtt)
                         if "fvRsPathAtt" in fvAEPg:
                             for fvRsPathAtt in fvAEPg["fvRsPathAtt"]:
-                                RsPathAtt = cobra.model.fv.RsPathAtt(
-                                    AEPg, **fvRsPathAtt
-                                )
+                                RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
                                 self.config.addMo(RsPathAtt)
         except Exception as e:
             self._result.log = "[fvApError]: " + str(e)
@@ -249,8 +242,9 @@ class CobraClass:
         Tenants > Application Profiles > Application EPGs
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for fvAEPg in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvAEPg["tenant"])
+                Tenant = cobra.model.fv.Tenant(Uni, name=fvAEPg["tenant"])
                 Ap = cobra.model.fv.Ap(Tenant, name=fvAEPg["fvApName"])
                 AEPg = cobra.model.fv.AEPg(Ap, **fvAEPg)
                 self.config.addMo(AEPg)
@@ -273,8 +267,9 @@ class CobraClass:
         Tenants > Application Profiles > Application EPGs > EPG Name > Static Ports
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for fvAp in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvAp["tenant"])
+                Tenant = cobra.model.fv.Tenant(Uni, name=fvAp["tenant"])
                 self.config.addMo(Tenant)
                 Ap = cobra.model.fv.Ap(Tenant, **fvAp)
                 self.config.addMo(Ap)
@@ -284,9 +279,7 @@ class CobraClass:
                         # self.config.addMo(AEPg)
                         if "fvRsPathAtt" in fvAEPg:
                             for fvRsPathAtt in fvAEPg["fvRsPathAtt"]:
-                                RsPathAtt = cobra.model.fv.RsPathAtt(
-                                    AEPg, **fvRsPathAtt
-                                )
+                                RsPathAtt = cobra.model.fv.RsPathAtt(AEPg, **fvRsPathAtt)
                                 self.config.addMo(RsPathAtt)
         except Exception as e:
             self._result.log = "[fvApError]: " + str(e)
@@ -297,8 +290,9 @@ class CobraClass:
         Tenants > Application Profiles > Application EPGs > EPG Name > Static Ports
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for fvRsPathAtt in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvRsPathAtt["tenant"])
+                Tenant = cobra.model.fv.Tenant(Uni, name=fvRsPathAtt["tenant"])
                 self.config.addMo(Tenant)
                 Ap = cobra.model.fv.Ap(Tenant, name=fvRsPathAtt["fvApName"])
                 self.config.addMo(Ap)
@@ -332,8 +326,9 @@ class CobraClass:
         Tenants > Networking > Bridge Domains
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for fvBD in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvBD["tenant"])
+                Tenant = cobra.model.fv.Tenant(Uni, name=fvBD["tenant"])
                 BD = cobra.model.fv.BD(Tenant, **fvBD)
                 self.config.addMo(BD)
                 if "fvRsCtx" in fvBD:
@@ -343,9 +338,7 @@ class CobraClass:
                     IfP = cobra.model.igmp.IfP(BD, **fvBD["igmpIfP"])
                     self.config.addMo(IfP)
                 if "fvRsBdToEpRet" in fvBD:
-                    RsBdToEpRet = cobra.model.fv.RsBdToEpRet(
-                        BD, **fvBD["fvRsBdToEpRet"]
-                    )
+                    RsBdToEpRet = cobra.model.fv.RsBdToEpRet(BD, **fvBD["fvRsBdToEpRet"])
                     self.config.addMo(RsBdToEpRet)
                 if "fvRsIgmpsn" in fvBD:
                     RsIgmpsn = cobra.model.fv.RsIgmpsn(BD, **fvBD["fvRsIgmpsn"])
@@ -370,8 +363,9 @@ class CobraClass:
         Tenants > Networking > VRFs
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for fvCtx in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvCtx["tenant"])
+                Tenant = cobra.model.fv.Tenant(Uni, name=fvCtx["tenant"])
                 Ctx = cobra.model.fv.Ctx(Tenant, **fvCtx)
                 self.config.addMo(Ctx)
                 if "vzAny" in fvCtx:
@@ -380,50 +374,32 @@ class CobraClass:
                     if "vzRsAnyToProv" in fvCtx["vzAny"]:
                         for vzRsAnyToProv in fvCtx["vzAny"]["vzRsAnyToProv"]:
                             if check("tnVzBrCPName", vzRsAnyToProv):
-                                RsAnyToProv = cobra.model.vz.RsAnyToProv(
-                                    Any, **vzRsAnyToProv
-                                )
+                                RsAnyToProv = cobra.model.vz.RsAnyToProv(Any, **vzRsAnyToProv)
                                 self.config.addMo(RsAnyToProv)
                     if "vzRsAnyToCons" in fvCtx["vzAny"]:
                         for vzRsAnyToCons in fvCtx["vzAny"]["vzRsAnyToCons"]:
                             if check("tnVzBrCPName", vzRsAnyToCons):
-                                RsAnyToCons = cobra.model.vz.RsAnyToCons(
-                                    Any, **vzRsAnyToCons
-                                )
+                                RsAnyToCons = cobra.model.vz.RsAnyToCons(Any, **vzRsAnyToCons)
                                 self.config.addMo(RsAnyToCons)
                 if "fvRsCtxToEpRet" in fvCtx:
                     if check("tnFvEpRetPolName", fvCtx["fvRsCtxToEpRet"]):
-                        RsCtxToEpRet = cobra.model.fv.RsCtxToEpRet(
-                            Ctx, **fvCtx["fvRsCtxToEpRet"]
-                        )
+                        RsCtxToEpRet = cobra.model.fv.RsCtxToEpRet(Ctx, **fvCtx["fvRsCtxToEpRet"])
                         self.config.addMo(RsCtxToEpRet)
                 if "fvRsCtxToExtRouteTagPol" in fvCtx:
-                    if check(
-                        "tnL3extRouteTagPolName", fvCtx["fvRsCtxToExtRouteTagPol"]
-                    ):
-                        RsCtxToExtRouteTagPol = cobra.model.fv.RsCtxToExtRouteTagPol(
-                            Ctx, **fvCtx["fvRsCtxToExtRouteTagPol"]
-                        )
+                    if check("tnL3extRouteTagPolName", fvCtx["fvRsCtxToExtRouteTagPol"]):
+                        RsCtxToExtRouteTagPol = cobra.model.fv.RsCtxToExtRouteTagPol(Ctx, **fvCtx["fvRsCtxToExtRouteTagPol"])
                         self.config.addMo(RsCtxToExtRouteTagPol)
                 if "fvRsOspfCtxPol" in fvCtx:
                     if check("tnOspfCtxPolName", fvCtx["fvRsOspfCtxPol"]):
-                        RsOspfCtxPol = cobra.model.fv.RsOspfCtxPol(
-                            Ctx, **fvCtx["fvRsOspfCtxPol"]
-                        )
+                        RsOspfCtxPol = cobra.model.fv.RsOspfCtxPol(Ctx, **fvCtx["fvRsOspfCtxPol"])
                         self.config.addMo(RsOspfCtxPol)
                 if "fvRsBgpCtxPol" in fvCtx:
                     if check("tnBgpCtxPolName", fvCtx["fvRsBgpCtxPol"]):
-                        RsBgpCtxPol = cobra.model.fv.RsBgpCtxPol(
-                            Ctx, **fvCtx["fvRsBgpCtxPol"]
-                        )
+                        RsBgpCtxPol = cobra.model.fv.RsBgpCtxPol(Ctx, **fvCtx["fvRsBgpCtxPol"])
                         self.config.addMo(RsBgpCtxPol)
                 if "fvRsVrfValidationPol" in fvCtx:
-                    if check(
-                        "tnL3extVrfValidationPolName", fvCtx["fvRsVrfValidationPol"]
-                    ):
-                        RsVrfValidationPol = cobra.model.fv.RsVrfValidationPol(
-                            Ctx, **fvCtx["fvRsVrfValidationPol"]
-                        )
+                    if check("tnL3extVrfValidationPolName", fvCtx["fvRsVrfValidationPol"]):
+                        RsVrfValidationPol = cobra.model.fv.RsVrfValidationPol(Ctx, **fvCtx["fvRsVrfValidationPol"])
                         self.config.addMo(RsVrfValidationPol)
                 if "pimCtxP" in fvCtx:
                     if check("mtu", fvCtx["pimCtxP"]):
@@ -456,18 +432,12 @@ class CobraClass:
                         l3ext_lnodep = cobra.model.l3ext.LNodeP(mo, **node)
                         if "l3extRsNodeL3OutAtt" in node:
                             for node_l3out_att in node["l3extRsNodeL3OutAtt"]:
-                                cobra.model.l3ext.RsNodeL3OutAtt(
-                                    l3ext_lnodep, **node_l3out_att
-                                )
+                                cobra.model.l3ext.RsNodeL3OutAtt(l3ext_lnodep, **node_l3out_att)
                         if "l3extLIfP" in node:
-                            l3ext_lifp = cobra.model.l3ext.LIfP(
-                                l3ext_lnodep, **node["l3extLIfP"]
-                            )
+                            l3ext_lifp = cobra.model.l3ext.LIfP(l3ext_lnodep, **node["l3extLIfP"])
                             if "l3extRsPathL3OutAtt" in node["l3extLIfP"]:
                                 for l3att in node["l3extLIfP"]["l3extRsPathL3OutAtt"]:
-                                    cobra.model.l3ext.RsPathL3OutAtt(
-                                        l3ext_lifp, **l3att
-                                    )
+                                    cobra.model.l3ext.RsPathL3OutAtt(l3ext_lifp, **l3att)
                 self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[l3extOutError]: " + str(e)
@@ -489,16 +459,15 @@ class CobraClass:
         Tenants > mgmt > IP Address Pools
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for fvnsAddrInst in value:
-                Tenant = cobra.model.fv.Tenant(self.__uni, name=fvnsAddrInst["tenant"])
+                Tenant = cobra.model.fv.Tenant(Uni, name=fvnsAddrInst["tenant"])
                 AddrInst = cobra.model.fvns.AddrInst(Tenant, **fvnsAddrInst)
                 self.config.addMo(AddrInst)
                 if "fvnsUcastAddrBlk" in fvnsAddrInst:
                     for fvnsUcastAddrBlk in fvnsAddrInst["fvnsUcastAddrBlk"]:
                         if check("from", fvnsUcastAddrBlk):
-                            UcastAddrBlk = cobra.model.fvns.UcastAddrBlk(
-                                AddrInst, **fvnsUcastAddrBlk
-                            )
+                            UcastAddrBlk = cobra.model.fvns.UcastAddrBlk(AddrInst, **fvnsUcastAddrBlk)
                             self.config.addMo(UcastAddrBlk)
         except Exception as e:
             self._result.log = "[fvnsAddrInstError]: " + str(e)
@@ -508,33 +477,27 @@ class CobraClass:
         Tenants > mgmt > Managed Node Connectivity Groups
         """
         try:
-            FuncP = cobra.model.infra.FuncP(self.__infra)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            FuncP = cobra.model.infra.FuncP(Infra)
             for mgmtGrp in value:
                 Grp = cobra.model.mgmt.Grp(FuncP, **mgmtGrp)
                 self.config.addMo(Grp)
                 if "mgmtOoBZone" in mgmtGrp:
                     OoBZone = cobra.model.mgmt.OoBZone(Grp)
                     if "mgmtRsOoB" in mgmtGrp["mgmtOoBZone"]:
-                        RsOoB = cobra.model.mgmt.RsOoB(
-                            OoBZone, **mgmtGrp["mgmtOoBZone"]["mgmtRsOoB"]
-                        )
+                        RsOoB = cobra.model.mgmt.RsOoB(OoBZone, **mgmtGrp["mgmtOoBZone"]["mgmtRsOoB"])
                         self.config.addMo(RsOoB)
                     if "mgmtRsAddrInst" in mgmtGrp["mgmtOoBZone"]:
-                        RsAddrInst = cobra.model.mgmt.RsAddrInst(
-                            OoBZone, **mgmtGrp["mgmtOoBZone"]["mgmtRsAddrInst"]
-                        )
+                        RsAddrInst = cobra.model.mgmt.RsAddrInst(OoBZone, **mgmtGrp["mgmtOoBZone"]["mgmtRsAddrInst"])
                         self.config.addMo(RsAddrInst)
                 if "mgmtInBZone" in mgmtGrp:
                     InBZone = cobra.model.mgmt.InBZone(Grp)
                     if "mgmtRsInB" in mgmtGrp["mgmtInBZone"]:
-                        RsInB = cobra.model.mgmt.RsInB(
-                            InBZone, **mgmtGrp["mgmtInBZone"]["mgmtRsInB"]
-                        )
+                        RsInB = cobra.model.mgmt.RsInB(InBZone, **mgmtGrp["mgmtInBZone"]["mgmtRsInB"])
                         self.config.addMo(RsInB)
                     if "mgmtRsAddrInst" in mgmtGrp["mgmtInBZone"]:
-                        RsAddrInst = cobra.model.mgmt.RsAddrInst(
-                            InBZone, **mgmtGrp["mgmtInBZone"]["mgmtRsAddrInst"]
-                        )
+                        RsAddrInst = cobra.model.mgmt.RsAddrInst(InBZone, **mgmtGrp["mgmtInBZone"]["mgmtRsAddrInst"])
                         self.config.addMo(RsAddrInst)
         except Exception as e:
             self._result.log = "[mgmtGrpError]: " + str(e)
@@ -544,8 +507,10 @@ class CobraClass:
         Tenants > mgmt > Node Management Addresses
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
             for mgmtNodeGrp in value:
-                NodeGrp = cobra.model.mgmt.NodeGrp(self.__infra, **mgmtNodeGrp)
+                NodeGrp = cobra.model.mgmt.NodeGrp(Infra, **mgmtNodeGrp)
                 self.config.addMo(NodeGrp)
                 if "mgmtRsGrp" in mgmtNodeGrp:
                     for mgmtRsGrp in mgmtNodeGrp["mgmtRsGrp"]:
@@ -822,12 +787,15 @@ class CobraClass:
         Fabric > Inventory > Pod Fabric Setup Policy
         """
         try:
-            ctrlr_inst = cobra.model.ctrlr.Inst(self.__uni)
-            SetupPol = cobra.model.fabric.SetupPol(ctrlr_inst, **value)
-            if "SetupP" in value:
-                for item in value["SetupP"]:
-                    mo = cobra.model.fabric.SetupP(SetupPol, **item)
-                    self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.ctrlr.Inst(Uni)
+            for fabricSetupPol in value:
+                SetupPol = cobra.model.fabric.SetupPol(Inst, **fabricSetupPol)
+                self.config.addMo(SetupPol)
+                if "fabricSetupP" in fabricSetupPol:
+                    for fabricSetupP in fabricSetupPol["fabricSetupP"]:
+                        SetupP = cobra.model.fabric.SetupP(SetupPol, **fabricSetupP)
+                        self.config.addMo(SetupP)
         except Exception as e:
             self._result.log = "[fabricSetupPolError]: " + str(e)
 
@@ -836,13 +804,12 @@ class CobraClass:
         Fabric > RsOosPath
         """
         try:
-            Inst = cobra.model.fabric.Inst(self.__uni)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.fabric.Inst(Uni)
             OOServicePol = cobra.model.fabric.OOServicePol(Inst)
             self.config.addMo(OOServicePol)
             for fabricRsOosPath in value:
-                RsOosPath = cobra.model.fabric.RsOosPath(
-                    OOServicePol, **fabricRsOosPath
-                )
+                RsOosPath = cobra.model.fabric.RsOosPath(OOServicePol, **fabricRsOosPath)
                 self.config.addMo(RsOosPath)
         except Exception as e:
             self._result.log = "[fabricRsOosPathError]: " + str(e)
@@ -852,11 +819,13 @@ class CobraClass:
         Fabric > Inventory > Pod Fabric Setup Policy
         """
         try:
-            for item in value:
-                ctrlr_inst = cobra.model.ctrlr.Inst(self.__uni)
-                setup_pol = cobra.model.fabric.SetupPol(ctrlr_inst)
-                mo = cobra.model.fabric.SetupP(setup_pol, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.ctrlr.Inst(Uni)
+            SetupPol = cobra.model.fabric.SetupPol(Inst)
+            self.config.addMo(SetupPol)
+            for fabricSetupP in value:
+                SetupP = cobra.model.fabric.SetupP(SetupPol, **fabricSetupP)
+                self.config.addMo(SetupP)
         except Exception as e:
             self._result.log = "[fabricSetupPError]: " + str(e)
 
@@ -865,12 +834,15 @@ class CobraClass:
         Fabric > Inventory > Fabric Membership
         """
         try:
-            ctrlr_inst = cobra.model.ctrlr.Inst(self.__uni)
-            node_ident_pol = cobra.model.fabric.NodeIdentPol(ctrlr_inst, **value)
-            if "NodeIdentP" in value:
-                for item in value["NodeIdentP"]:
-                    mo = cobra.model.fabric.NodeIdentP(node_ident_pol, **item)
-                    self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.ctrlr.Inst(Uni)
+            for fabricNodeIdentPol in value:
+                NodeIdentPol = cobra.model.fabric.NodeIdentPol(Inst, **fabricNodeIdentPol)
+                self.config.addMo(NodeIdentPol)
+                if "fabricNodeIdentP" in fabricNodeIdentPol:
+                    for fabricNodeIdentPol in fabricNodeIdentPol["fabricNodeIdentP"]:
+                        NodeIdentP = cobra.model.fabric.NodeIdentP(NodeIdentPol, **fabricNodeIdentPol)
+                        self.config.addMo(NodeIdentP)
         except Exception as e:
             self._result.log = "[NodeIdentPolPError]: " + str(e)
 
@@ -888,17 +860,11 @@ class CobraClass:
                 if "fabricRsSnmpPol" in item:
                     cobra.model.fabric.RsSnmpPol(mo, **item["fabricRsSnmpPol"])
                 if "fabricRsPodPGrpIsisDomP" in item:
-                    cobra.model.fabric.RsPodPGrpIsisDomP(
-                        mo, **item["fabricRsPodPGrpIsisDomP"]
-                    )
+                    cobra.model.fabric.RsPodPGrpIsisDomP(mo, **item["fabricRsPodPGrpIsisDomP"])
                 if "fabricRsPodPGrpCoopP" in item:
-                    cobra.model.fabric.RsPodPGrpCoopP(
-                        mo, **item["fabricRsPodPGrpCoopP"]
-                    )
+                    cobra.model.fabric.RsPodPGrpCoopP(mo, **item["fabricRsPodPGrpCoopP"])
                 if "fabricRsPodPGrpBGPRRP" in item:
-                    cobra.model.fabric.RsPodPGrpBGPRRP(
-                        mo, **item["fabricRsPodPGrpBGPRRP"]
-                    )
+                    cobra.model.fabric.RsPodPGrpBGPRRP(mo, **item["fabricRsPodPGrpBGPRRP"])
                 if "fabricRsTimePol" in item:
                     cobra.model.fabric.RsTimePol(mo, **item["fabricRsTimePol"])
                 if "fabricRsMacsecPol" in item:
@@ -921,9 +887,7 @@ class CobraClass:
                     for pod_s in item["fabricPodS"]:
                         mo_pod_s = cobra.model.fabric.PodS(mo, **pod_s)
                         if "fabricRsPodPGrp" in pod_s:
-                            cobra.model.fabric.RsPodPGrp(
-                                mo_pod_s, **pod_s["fabricRsPodPGrp"]
-                            )
+                            cobra.model.fabric.RsPodPGrp(mo_pod_s, **pod_s["fabricRsPodPGrp"])
                         if "fabricPodBlk" in pod_s:
                             cobra.model.fabric.PodBlk(mo_pod_s, **pod_s["fabricPodBlk"])
                 self.config.addMo(mo)
@@ -1014,37 +978,21 @@ class CobraClass:
                 if "datetimeNtpAuthKey" in datetimePol:
                     for datetimeNtpAuthKey in datetimePol["datetimeNtpAuthKey"]:
                         if not_nan(datetimeNtpAuthKey):
-                            NtpAuthKey = cobra.model.datetime.NtpAuthKey(
-                                Pol, **datetimeNtpAuthKey
-                            )
+                            NtpAuthKey = cobra.model.datetime.NtpAuthKey(Pol, **datetimeNtpAuthKey)
                             self.config.addMo(NtpAuthKey)
                 if "datetimeNtpProv" in datetimePol:
                     for datetimeNtpProv in datetimePol["datetimeNtpProv"]:
                         if not_nan(datetimeNtpProv):
-                            NtpProv = cobra.model.datetime.NtpProv(
-                                Pol, **datetimeNtpProv
-                            )
+                            NtpProv = cobra.model.datetime.NtpProv(Pol, **datetimeNtpProv)
                             self.config.addMo(NtpProv)
                             if "datetimeRsNtpProvToNtpAuthKey" in datetimeNtpProv:
-                                for datetimeRsNtpProvToNtpAuthKey in datetimeNtpProv[
-                                    "datetimeRsNtpProvToNtpAuthKey"
-                                ]:
+                                for datetimeRsNtpProvToNtpAuthKey in datetimeNtpProv["datetimeRsNtpProvToNtpAuthKey"]:
                                     if not_nan(datetimeRsNtpProvToNtpAuthKey):
-                                        RsNtpProvToNtpAuthKey = (
-                                            cobra.model.datetime.RsNtpProvToNtpAuthKey(
-                                                NtpProv,
-                                                **datetimeRsNtpProvToNtpAuthKey,
-                                            )
-                                        )
+                                        RsNtpProvToNtpAuthKey = cobra.model.datetime.RsNtpProvToNtpAuthKey(NtpProv, **datetimeRsNtpProvToNtpAuthKey)
                                         self.config.addMo(RsNtpProvToNtpAuthKey)
                             if "datetimeRsNtpProvToEpg" in datetimeNtpProv:
                                 if not_nan(datetimeNtpProv["datetimeRsNtpProvToEpg"]):
-                                    RsNtpProvToEpg = (
-                                        cobra.model.datetime.RsNtpProvToEpg(
-                                            NtpProv,
-                                            **datetimeNtpProv["datetimeRsNtpProvToEpg"],
-                                        )
-                                    )
+                                    RsNtpProvToEpg = cobra.model.datetime.RsNtpProvToEpg(NtpProv, **datetimeNtpProv["datetimeRsNtpProvToEpg"])
                                     self.config.addMo(RsNtpProvToEpg)
         except Exception as e:
             self._result.log = "[datetimePolError]: " + str(e)
@@ -1061,21 +1009,15 @@ class CobraClass:
                 if "snmpClientGrpP" in snmpPol:
                     for snmpClientGrpP in snmpPol["snmpClientGrpP"]:
                         if not_nan(snmpClientGrpP):
-                            ClientGrpP = cobra.model.snmp.ClientGrpP(
-                                Pol, **snmpClientGrpP
-                            )
+                            ClientGrpP = cobra.model.snmp.ClientGrpP(Pol, **snmpClientGrpP)
                             if "snmpRsEpg" in snmpClientGrpP:
                                 if not_nan(snmpClientGrpP["snmpRsEpg"]):
-                                    RsEpg = cobra.model.snmp.RsEpg(
-                                        ClientGrpP, **snmpClientGrpP["snmpRsEpg"]
-                                    )
+                                    RsEpg = cobra.model.snmp.RsEpg(ClientGrpP, **snmpClientGrpP["snmpRsEpg"])
                                     self.config.addMo(RsEpg)
                             if "snmpClientP" in snmpClientGrpP:
                                 for snmpClientP in snmpClientGrpP["snmpClientP"]:
                                     if not_nan(snmpClientP):
-                                        ClientP = cobra.model.snmp.ClientP(
-                                            ClientGrpP, **snmpClientP
-                                        )
+                                        ClientP = cobra.model.snmp.ClientP(ClientGrpP, **snmpClientP)
                                         self.config.addMo(ClientP)
                 if "snmpUserP" in snmpPol:
                     for snmpUserP in snmpPol["snmpUserP"]:
@@ -1085,16 +1027,12 @@ class CobraClass:
                 if "snmpCommunityP" in snmpPol:
                     for snmpCommunityP in snmpPol["snmpCommunityP"]:
                         if not_nan(snmpCommunityP):
-                            CommunityP = cobra.model.snmp.CommunityP(
-                                Pol, **snmpCommunityP
-                            )
+                            CommunityP = cobra.model.snmp.CommunityP(Pol, **snmpCommunityP)
                             self.config.addMo(CommunityP)
                 if "snmpTrapFwdServerP" in snmpPol:
                     for snmpTrapFwdServerP in snmpPol["snmpTrapFwdServerP"]:
                         if not_nan(snmpTrapFwdServerP):
-                            TrapFwdServerP = cobra.model.snmp.TrapFwdServerP(
-                                Pol, **snmpTrapFwdServerP
-                            )
+                            TrapFwdServerP = cobra.model.snmp.TrapFwdServerP(Pol, **snmpTrapFwdServerP)
                             self.config.addMo(TrapFwdServerP)
         except Exception as e:
             self._result.log = "[snmpPolError]: " + str(e)
@@ -1107,6 +1045,7 @@ class CobraClass:
             Inst = cobra.model.fabric.Inst(self.__uni)
             for commPol in value:
                 Pol = cobra.model.comm.Pol(Inst, **commPol)
+                self.config.addMo(Pol)
                 if "commTelnet" in commPol:
                     if not_nan(commPol["commTelnet"]):
                         Telnet = cobra.model.comm.Telnet(Pol, **commPol["commTelnet"])
@@ -1125,9 +1064,7 @@ class CobraClass:
                         self.config.addMo(Https)
                 if "commShellinabox" in commPol:
                     if not_nan(commPol["commShellinabox"]):
-                        Shellinabox = cobra.model.comm.Shellinabox(
-                            Pol, **commPol["commShellinabox"]
-                        )
+                        Shellinabox = cobra.model.comm.Shellinabox(Pol, **commPol["commShellinabox"])
                         self.config.addMo(Shellinabox)
         except Exception as e:
             self._result.log = "[commPolError]: " + str(e)
@@ -1143,8 +1080,10 @@ class CobraClass:
         Fabric > Access Policies > Switches > Leaf Switches > Profiles
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
             for infraNodeP in value:
-                NodeP = cobra.model.infra.NodeP(self.__infra, **infraNodeP)
+                NodeP = cobra.model.infra.NodeP(Infra, **infraNodeP)
                 self.config.addMo(NodeP)
                 if "infraLeafS" in infraNodeP:
                     for infraLeafS in infraNodeP["infraLeafS"]:
@@ -1153,22 +1092,16 @@ class CobraClass:
                             self.config.addMo(LeafS)
                             if "infraNodeBlk" in infraLeafS:
                                 if check("from_", infraLeafS["infraNodeBlk"]):
-                                    NodeBlk = cobra.model.infra.NodeBlk(
-                                        LeafS, **infraLeafS["infraNodeBlk"]
-                                    )
+                                    NodeBlk = cobra.model.infra.NodeBlk(LeafS, **infraLeafS["infraNodeBlk"])
                                     self.config.addMo(NodeBlk)
                             if "infraRsAccNodePGrp" in infraLeafS:
                                 if check("tDn", infraLeafS["infraRsAccNodePGrp"]):
-                                    RsAccNodePGrp = cobra.model.infra.RsAccNodePGrp(
-                                        LeafS, **infraLeafS["infraRsAccNodePGrp"]
-                                    )
+                                    RsAccNodePGrp = cobra.model.infra.RsAccNodePGrp(LeafS, **infraLeafS["infraRsAccNodePGrp"])
                                     self.config.addMo(RsAccNodePGrp)
                 if "infraRsAccPortP" in infraNodeP:
                     for infraRsAccPortP in infraNodeP["infraRsAccPortP"]:
                         if check("tDn", infraRsAccPortP):
-                            RsAccPortP = cobra.model.infra.RsAccPortP(
-                                NodeP, **infraRsAccPortP
-                            )
+                            RsAccPortP = cobra.model.infra.RsAccPortP(NodeP, **infraRsAccPortP)
                             self.config.addMo(RsAccPortP)
         except Exception as e:
             self._result.log = "[infraNodePError]: " + str(e)
@@ -1178,211 +1111,87 @@ class CobraClass:
         Fabric > Access Policies > Switches > Leaf Switches > Policy Groups
         """
         try:
-            FuncP = cobra.model.infra.FuncP(self.__infra)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            FuncP = cobra.model.infra.FuncP(Infra)
             for infraAccNodePGrp in value:
                 AccNodePGrp = cobra.model.infra.AccNodePGrp(FuncP, **infraAccNodePGrp)
                 self.config.addMo(AccNodePGrp)
                 if "infraRsTopoctrlFwdScaleProfPol" in infraAccNodePGrp:
-                    if check(
-                        "tnTopoctrlFwdScaleProfilePolName",
-                        infraAccNodePGrp["infraRsTopoctrlFwdScaleProfPol"],
-                    ):
-                        RsTopoctrlFwdScaleProfPol = (
-                            cobra.model.infra.RsTopoctrlFwdScaleProfPol(
-                                AccNodePGrp,
-                                **infraAccNodePGrp["infraRsTopoctrlFwdScaleProfPol"],
-                            )
-                        )
+                    if check("tnTopoctrlFwdScaleProfilePolName", infraAccNodePGrp["infraRsTopoctrlFwdScaleProfPol"]):
+                        RsTopoctrlFwdScaleProfPol = cobra.model.infra.RsTopoctrlFwdScaleProfPol(AccNodePGrp, **infraAccNodePGrp["infraRsTopoctrlFwdScaleProfPol"])
                         self.config.addMo(RsTopoctrlFwdScaleProfPol)
                 if "infraRsLeafTopoctrlUsbConfigProfilePol" in infraAccNodePGrp:
-                    if check(
-                        "tnTopoctrlUsbConfigProfilePolName",
-                        infraAccNodePGrp["infraRsLeafTopoctrlUsbConfigProfilePol"],
-                    ):
-                        RsLeafTopoctrlUsbConfigProfilePol = (
-                            cobra.model.infra.RsLeafTopoctrlUsbConfigProfilePol(
-                                AccNodePGrp,
-                                **infraAccNodePGrp[
-                                    "infraRsLeafTopoctrlUsbConfigProfilePol"
-                                ],
-                            )
-                        )
+                    if check("tnTopoctrlUsbConfigProfilePolName", infraAccNodePGrp["infraRsLeafTopoctrlUsbConfigProfilePol"]):
+                        RsLeafTopoctrlUsbConfigProfilePol = cobra.model.infra.RsLeafTopoctrlUsbConfigProfilePol(AccNodePGrp, **infraAccNodePGrp["infraRsLeafTopoctrlUsbConfigProfilePol"])
                         self.config.addMo(RsLeafTopoctrlUsbConfigProfilePol)
                 if "infraRsLeafPGrpToLldpIfPol" in infraAccNodePGrp:
-                    if check(
-                        "tnLldpIfPolName",
-                        infraAccNodePGrp["infraRsLeafPGrpToLldpIfPol"],
-                    ):
-                        RsLeafPGrpToLldpIfPol = cobra.model.infra.RsLeafPGrpToLldpIfPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsLeafPGrpToLldpIfPol"],
-                        )
+                    if check("tnLldpIfPolName", infraAccNodePGrp["infraRsLeafPGrpToLldpIfPol"]):
+                        RsLeafPGrpToLldpIfPol = cobra.model.infra.RsLeafPGrpToLldpIfPol(AccNodePGrp, **infraAccNodePGrp["infraRsLeafPGrpToLldpIfPol"])
                         self.config.addMo(RsLeafPGrpToLldpIfPol)
                 if "infraRsBfdIpv6InstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnBfdIpv6InstPolName",
-                        infraAccNodePGrp["infraRsBfdIpv6InstPol"],
-                    ):
-                        RsBfdIpv6InstPol = cobra.model.infra.RsBfdIpv6InstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsBfdIpv6InstPol"],
-                        )
+                    if check("tnBfdIpv6InstPolName", infraAccNodePGrp["infraRsBfdIpv6InstPol"]):
+                        RsBfdIpv6InstPol = cobra.model.infra.RsBfdIpv6InstPol(AccNodePGrp, **infraAccNodePGrp["infraRsBfdIpv6InstPol"])
                         self.config.addMo(RsBfdIpv6InstPol)
                 if "infraRsSynceInstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnSynceInstPolName",
-                        infraAccNodePGrp["infraRsSynceInstPol"],
-                    ):
-                        RsSynceInstPol = cobra.model.infra.RsSynceInstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsSynceInstPol"],
-                        )
+                    if check("tnSynceInstPolName", infraAccNodePGrp["infraRsSynceInstPol"]):
+                        RsSynceInstPol = cobra.model.infra.RsSynceInstPol(AccNodePGrp, **infraAccNodePGrp["infraRsSynceInstPol"])
                         self.config.addMo(RsSynceInstPol)
                 if "infraRsPoeInstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnPoeInstPolName",
-                        infraAccNodePGrp["infraRsPoeInstPol"],
-                    ):
-                        RsPoeInstPol = cobra.model.infra.RsPoeInstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsPoeInstPol"],
-                        )
+                    if check("tnPoeInstPolName", infraAccNodePGrp["infraRsPoeInstPol"]):
+                        RsPoeInstPol = cobra.model.infra.RsPoeInstPol(AccNodePGrp, **infraAccNodePGrp["infraRsPoeInstPol"])
                         self.config.addMo(RsPoeInstPol)
                 if "infraRsBfdMhIpv4InstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnBfdMhIpv4InstPolName",
-                        infraAccNodePGrp["infraRsBfdMhIpv4InstPol"],
-                    ):
-                        RsBfdMhIpv4InstPol = cobra.model.infra.RsBfdMhIpv4InstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsBfdMhIpv4InstPol"],
-                        )
+                    if check("tnBfdMhIpv4InstPolName", infraAccNodePGrp["infraRsBfdMhIpv4InstPol"]):
+                        RsBfdMhIpv4InstPol = cobra.model.infra.RsBfdMhIpv4InstPol(AccNodePGrp, **infraAccNodePGrp["infraRsBfdMhIpv4InstPol"])
                         self.config.addMo(RsBfdMhIpv4InstPol)
                 if "infraRsBfdMhIpv6InstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnBfdMhIpv6InstPolName",
-                        infraAccNodePGrp["infraRsBfdMhIpv6InstPol"],
-                    ):
-                        RsBfdMhIpv6InstPol = cobra.model.infra.RsBfdMhIpv6InstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsBfdMhIpv6InstPol"],
-                        )
+                    if check("tnBfdMhIpv6InstPolName", infraAccNodePGrp["infraRsBfdMhIpv6InstPol"]):
+                        RsBfdMhIpv6InstPol = cobra.model.infra.RsBfdMhIpv6InstPol(AccNodePGrp, **infraAccNodePGrp["infraRsBfdMhIpv6InstPol"])
                         self.config.addMo(RsBfdMhIpv6InstPol)
                 if "infraRsEquipmentFlashConfigPol" in infraAccNodePGrp:
-                    if check(
-                        "tnEquipmentFlashConfigPolName",
-                        infraAccNodePGrp["infraRsEquipmentFlashConfigPol"],
-                    ):
-                        RsEquipmentFlashConfigPol = (
-                            cobra.model.infra.RsEquipmentFlashConfigPol(
-                                AccNodePGrp,
-                                **infraAccNodePGrp["infraRsEquipmentFlashConfigPol"],
-                            )
-                        )
+                    if check("tnEquipmentFlashConfigPolName", infraAccNodePGrp["infraRsEquipmentFlashConfigPol"]):
+                        RsEquipmentFlashConfigPol = cobra.model.infra.RsEquipmentFlashConfigPol(AccNodePGrp, **infraAccNodePGrp["infraRsEquipmentFlashConfigPol"])
                         self.config.addMo(RsEquipmentFlashConfigPol)
                 if "infraRsMonNodeInfraPol" in infraAccNodePGrp:
-                    if check(
-                        "tnMonInfraPolName",
-                        infraAccNodePGrp["infraRsMonNodeInfraPol"],
-                    ):
-                        RsMonNodeInfraPol = cobra.model.infra.RsMonNodeInfraPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsMonNodeInfraPol"],
-                        )
+                    if check("tnMonInfraPolName", infraAccNodePGrp["infraRsMonNodeInfraPol"]):
+                        RsMonNodeInfraPol = cobra.model.infra.RsMonNodeInfraPol(AccNodePGrp, **infraAccNodePGrp["infraRsMonNodeInfraPol"])
                         self.config.addMo(RsMonNodeInfraPol)
                 if "infraRsFcInstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnFcInstPolName",
-                        infraAccNodePGrp["infraRsFcInstPol"],
-                    ):
-                        RsFcInstPol = cobra.model.infra.RsFcInstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsFcInstPol"],
-                        )
+                    if check("tnFcInstPolName", infraAccNodePGrp["infraRsFcInstPol"]):
+                        RsFcInstPol = cobra.model.infra.RsFcInstPol(AccNodePGrp, **infraAccNodePGrp["infraRsFcInstPol"])
                         self.config.addMo(RsFcInstPol)
                 if "infraRsTopoctrlFastLinkFailoverInstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnTopoctrlFastLinkFailoverInstPolName",
-                        infraAccNodePGrp["infraRsTopoctrlFastLinkFailoverInstPol"],
-                    ):
-                        RsTopoctrlFastLinkFailoverInstPol = (
-                            cobra.model.infra.RsTopoctrlFastLinkFailoverInstPol(
-                                AccNodePGrp,
-                                **infraAccNodePGrp[
-                                    "infraRsTopoctrlFastLinkFailoverInstPol"
-                                ],
-                            )
-                        )
+                    if check("tnTopoctrlFastLinkFailoverInstPolName", infraAccNodePGrp["infraRsTopoctrlFastLinkFailoverInstPol"]):
+                        RsTopoctrlFastLinkFailoverInstPol = cobra.model.infra.RsTopoctrlFastLinkFailoverInstPol(AccNodePGrp, **infraAccNodePGrp["infraRsTopoctrlFastLinkFailoverInstPol"])
                         self.config.addMo(RsTopoctrlFastLinkFailoverInstPol)
                 if "infraRsMstInstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnStpInstPolName",
-                        infraAccNodePGrp["infraRsMstInstPol"],
-                    ):
-                        RsMstInstPol = cobra.model.infra.RsMstInstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsMstInstPol"],
-                        )
+                    if check("tnStpInstPolName", infraAccNodePGrp["infraRsMstInstPol"]):
+                        RsMstInstPol = cobra.model.infra.RsMstInstPol(AccNodePGrp, **infraAccNodePGrp["infraRsMstInstPol"])
                         self.config.addMo(RsMstInstPol)
                 if "infraRsFcFabricPol" in infraAccNodePGrp:
-                    if check(
-                        "tnFcFabricPolName",
-                        infraAccNodePGrp["infraRsFcFabricPol"],
-                    ):
-                        RsFcFabricPol = cobra.model.infra.RsFcFabricPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsFcFabricPol"],
-                        )
+                    if check("tnFcFabricPolName", infraAccNodePGrp["infraRsFcFabricPol"]):
+                        RsFcFabricPol = cobra.model.infra.RsFcFabricPol(AccNodePGrp, **infraAccNodePGrp["infraRsFcFabricPol"])
                         self.config.addMo(RsFcFabricPol)
                 if "infraRsLeafCoppProfile" in infraAccNodePGrp:
-                    if check(
-                        "tnCoppLeafProfileName",
-                        infraAccNodePGrp["infraRsLeafCoppProfile"],
-                    ):
-                        RsLeafCoppProfile = cobra.model.infra.RsLeafCoppProfile(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsLeafCoppProfile"],
-                        )
+                    if check("tnCoppLeafProfileName", infraAccNodePGrp["infraRsLeafCoppProfile"]):
+                        RsLeafCoppProfile = cobra.model.infra.RsLeafCoppProfile(AccNodePGrp, **infraAccNodePGrp["infraRsLeafCoppProfile"])
                         self.config.addMo(RsLeafCoppProfile)
                 if "infraRsIaclLeafProfile" in infraAccNodePGrp:
-                    if check(
-                        "tnIaclLeafProfileName",
-                        infraAccNodePGrp["infraRsIaclLeafProfile"],
-                    ):
-                        RsIaclLeafProfile = cobra.model.infra.RsIaclLeafProfile(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsIaclLeafProfile"],
-                        )
+                    if check("tnIaclLeafProfileName", infraAccNodePGrp["infraRsIaclLeafProfile"]):
+                        RsIaclLeafProfile = cobra.model.infra.RsIaclLeafProfile(AccNodePGrp, **infraAccNodePGrp["infraRsIaclLeafProfile"])
                         self.config.addMo(RsIaclLeafProfile)
                 if "infraRsBfdIpv4InstPol" in infraAccNodePGrp:
-                    if check(
-                        "tnBfdIpv4InstPolName",
-                        infraAccNodePGrp["infraRsBfdIpv4InstPol"],
-                    ):
-                        RsBfdIpv4InstPol = cobra.model.infra.RsBfdIpv4InstPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsBfdIpv4InstPol"],
-                        )
+                    if check("tnBfdIpv4InstPolName", infraAccNodePGrp["infraRsBfdIpv4InstPol"]):
+                        RsBfdIpv4InstPol = cobra.model.infra.RsBfdIpv4InstPol(AccNodePGrp, **infraAccNodePGrp["infraRsBfdIpv4InstPol"])
                         self.config.addMo(RsBfdIpv4InstPol)
                 if "infraRsL2NodeAuthPol" in infraAccNodePGrp:
-                    if check(
-                        "tnL2NodeAuthPolName",
-                        infraAccNodePGrp["infraRsL2NodeAuthPol"],
-                    ):
-                        RsL2NodeAuthPol = cobra.model.infra.RsL2NodeAuthPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsL2NodeAuthPol"],
-                        )
+                    if check("tnL2NodeAuthPolName", infraAccNodePGrp["infraRsL2NodeAuthPol"]):
+                        RsL2NodeAuthPol = cobra.model.infra.RsL2NodeAuthPol(AccNodePGrp, **infraAccNodePGrp["infraRsL2NodeAuthPol"])
                         self.config.addMo(RsL2NodeAuthPol)
                 if "infraRsLeafPGrpToCdpIfPol" in infraAccNodePGrp:
-                    if check(
-                        "tnCdpIfPolName",
-                        infraAccNodePGrp["infraRsLeafPGrpToCdpIfPol"],
-                    ):
-                        RsLeafPGrpToCdpIfPol = cobra.model.infra.RsLeafPGrpToCdpIfPol(
-                            AccNodePGrp,
-                            **infraAccNodePGrp["infraRsLeafPGrpToCdpIfPol"],
-                        )
+                    if check("tnCdpIfPolName", infraAccNodePGrp["infraRsLeafPGrpToCdpIfPol"]):
+                        RsLeafPGrpToCdpIfPol = cobra.model.infra.RsLeafPGrpToCdpIfPol(AccNodePGrp, **infraAccNodePGrp["infraRsLeafPGrpToCdpIfPol"])
                         self.config.addMo(RsLeafPGrpToCdpIfPol)
         except Exception as e:
             self._result.log = "[infraAccNodePGrpError]: " + str(e)
@@ -1392,22 +1201,24 @@ class CobraClass:
         Fabric > Access Policies > Switches > Spine Switches > Profiles
         """
         try:
-            for item in value:
-                mo = cobra.model.infra.SpineP(self.__infra, **item)
-                if "infraSpineS" in item:
-                    for spine_s in item["infraSpineS"]:
-                        mo_spine_s = cobra.model.infra.SpineS(mo, **spine_s)
-                        if "infraRsSpineAccNodePGrp" in spine_s:
-                            cobra.model.infra.RsSpineAccNodePGrp(
-                                mo_spine_s, **spine_s["infraRsSpineAccNodePGrp"]
-                            )
-                        if "infraNodeBlk" in spine_s:
-                            cobra.model.infra.NodeBlk(
-                                mo_spine_s, **spine_s["infraNodeBlk"]
-                            )
-                if "infraRsSpAccPortP" in item:
-                    cobra.model.infra.RsSpAccPortP(mo, **item["infraRsSpAccPortP"])
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for infraSpineP in value:
+                SpineP = cobra.model.infra.SpineP(Infra, **infraSpineP)
+                self.config.addMo(SpineP)
+                if "infraSpineS" in infraSpineP:
+                    for infraSpineS in infraSpineP["infraSpineS"]:
+                        SpineS = cobra.model.infra.SpineS(SpineP, **infraSpineS)
+                        self.config.addMo(SpineS)
+                        if "infraRsSpineAccNodePGrp" in infraSpineS:
+                            RsSpineAccNodePGrp = cobra.model.infra.RsSpineAccNodePGrp(SpineS, **infraSpineS["infraRsSpineAccNodePGrp"])
+                            self.config.addMo(RsSpineAccNodePGrp)
+                        if "infraNodeBlk" in infraSpineS:
+                            NodeBlk = cobra.model.infra.NodeBlk(SpineS, **infraSpineS["infraNodeBlk"])
+                            self.config.addMo(NodeBlk)
+                if "infraRsSpAccPortP" in infraSpineP:
+                    RsSpAccPortP = cobra.model.infra.RsSpAccPortP(SpineP, **infraSpineP["infraRsSpAccPortP"])
+                    self.config.addMo(RsSpAccPortP)
         except Exception as e:
             self._result.log = "[infraSpinePError]: " + str(e)
 
@@ -1416,34 +1227,30 @@ class CobraClass:
         Fabric > Access Policies > Switches > Spine Switches > Policy Groups
         """
         try:
-            for item in value:
-                funcp = cobra.model.infra.FuncP(self.__infra)
-                mo = cobra.model.infra.SpineAccNodePGrp(funcp, **item)
-                if "infraRsSpineCoppProfile" in item:
-                    cobra.model.infra.RsSpineCoppProfile(
-                        mo, **item["infraRsSpineCoppProfile"]
-                    )
-                if "infraRsSpineBfdIpv4InstPol" in item:
-                    cobra.model.infra.RsSpineBfdIpv4InstPol(
-                        mo, **item["infraRsSpineBfdIpv4InstPol"]
-                    )
-                if "infraRsSpineBfdIpv6InstPol" in item:
-                    cobra.model.infra.RsSpineBfdIpv6InstPol(
-                        mo, **item["infraRsSpineBfdIpv6InstPol"]
-                    )
-                if "infraRsIaclSpineProfile" in item:
-                    cobra.model.infra.RsIaclSpineProfile(
-                        mo, **item["infraRsIaclSpineProfile"]
-                    )
-                if "infraRsSpinePGrpToCdpIfPol" in item:
-                    cobra.model.infra.RsSpinePGrpToCdpIfPol(
-                        mo, **item["infraRsSpinePGrpToCdpIfPol"]
-                    )
-                if "infraRsSpinePGrpToLldpIfPol" in item:
-                    cobra.model.infra.RsSpinePGrpToLldpIfPol(
-                        mo, **item["infraRsSpinePGrpToLldpIfPol"]
-                    )
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            FuncP = cobra.model.infra.FuncP(Infra)
+            for infraSpineAccNodePGrp in value:
+                SpineAccNodePGrp = cobra.model.infra.SpineAccNodePGrp(FuncP, **infraSpineAccNodePGrp)
+                self.config.addMo(SpineAccNodePGrp)
+                if "infraRsSpineCoppProfile" in infraSpineAccNodePGrp:
+                    RsSpineCoppProfile = cobra.model.infra.RsSpineCoppProfile(SpineAccNodePGrp, **infraSpineAccNodePGrp["infraRsSpineCoppProfile"])
+                    self.config.addMo(RsSpineCoppProfile)
+                if "infraRsSpineBfdIpv4InstPol" in infraSpineAccNodePGrp:
+                    RsSpineBfdIpv4InstPol = cobra.model.infra.RsSpineBfdIpv4InstPol(SpineAccNodePGrp, **infraSpineAccNodePGrp["infraRsSpineBfdIpv4InstPol"])
+                    self.config.addMo(RsSpineBfdIpv4InstPol)
+                if "infraRsSpineBfdIpv6InstPol" in infraSpineAccNodePGrp:
+                    RsSpineBfdIpv6InstPol = cobra.model.infra.RsSpineBfdIpv6InstPol(SpineAccNodePGrp, **infraSpineAccNodePGrp["infraRsSpineBfdIpv6InstPol"])
+                    self.config.addMo(RsSpineBfdIpv6InstPol)
+                if "infraRsIaclSpineProfile" in infraSpineAccNodePGrp:
+                    RsIaclSpineProfile = cobra.model.infra.RsIaclSpineProfile(SpineAccNodePGrp, **infraSpineAccNodePGrp["infraRsIaclSpineProfile"])
+                    self.config.addMo(RsIaclSpineProfile)
+                if "infraRsSpinePGrpToCdpIfPol" in infraSpineAccNodePGrp:
+                    RsSpinePGrpToCdpIfPol = cobra.model.infra.RsSpinePGrpToCdpIfPol(SpineAccNodePGrp, **infraSpineAccNodePGrp["infraRsSpinePGrpToCdpIfPol"])
+                    self.config.addMo(RsSpinePGrpToCdpIfPol)
+                if "infraRsSpinePGrpToLldpIfPol" in infraSpineAccNodePGrp:
+                    RsSpinePGrpToLldpIfPol = cobra.model.infra.RsSpinePGrpToLldpIfPol(SpineAccNodePGrp, **infraSpineAccNodePGrp["infraRsSpinePGrpToLldpIfPol"])
+                    self.config.addMo(RsSpinePGrpToLldpIfPol)
         except Exception as e:
             self._result.log = "[infraSpineAccNodePGrpError]: " + str(e)
 
@@ -1452,19 +1259,22 @@ class CobraClass:
         Fabric > Access Policies > Interfaces > Spine Interfaces > Profiles
         """
         try:
-            for item in value:
-                mo = cobra.model.infra.SpAccPortP(self.__infra, **item)
-                if "infraSHPortS" in item:
-                    for sport_s in item["infraSHPortS"]:
-                        sh_port_s = cobra.model.infra.SHPortS(mo, **sport_s)
-                        if "infraRsSpAccGrp" in sport_s:
-                            cobra.model.infra.RsSpAccGrp(
-                                sh_port_s, **sport_s["infraRsSpAccGrp"]
-                            )
-                        if "infraPortBlk" in sport_s:
-                            for block in sport_s["infraPortBlk"]:
-                                cobra.model.infra.PortBlk(sh_port_s, **block)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for infraSpAccPortP in value:
+                SpAccPortP = cobra.model.infra.SpAccPortP(Infra, **infraSpAccPortP)
+                self.config.addMo(SpAccPortP)
+                if "infraSHPortS" in infraSpAccPortP:
+                    for infraSHPortS in infraSpAccPortP["infraSHPortS"]:
+                        SHPortS = cobra.model.infra.SHPortS(SpAccPortP, **infraSHPortS)
+                        self.config.addMo(SHPortS)
+                        if "infraRsSpAccGrp" in infraSHPortS:
+                            RsSpAccGrp = cobra.model.infra.RsSpAccGrp(SHPortS, **infraSHPortS["infraRsSpAccGrp"])
+                            self.config.addMo(RsSpAccGrp)
+                        if "infraPortBlk" in infraSHPortS:
+                            for infraPortBlk in infraSHPortS["infraPortBlk"]:
+                                PortBlk = cobra.model.infra.PortBlk(SHPortS, **infraPortBlk)
+                                self.config.addMo(PortBlk)
         except Exception as e:
             self._result.log = "[infraSpAccPortPError]: " + str(e)
 
@@ -1473,22 +1283,30 @@ class CobraClass:
         Fabric > Access Policies > Interfaces > Spine Interfaces > Policy Groups
         """
         try:
-            for item in value:
-                funcp = cobra.model.infra.FuncP(self.__infra)
-                mo = cobra.model.infra.SpAccPortGrp(funcp, **item)
-                if "infraRsHIfPol" in item:
-                    cobra.model.infra.RsHIfPol(mo, **item["infraRsHIfPol"])
-                if "infraRsCdpIfPol" in item:
-                    cobra.model.infra.RsCdpIfPol(mo, **item["infraRsCdpIfPol"])
-                if "infraRsMacsecIfPol" in item:
-                    cobra.model.infra.RsMacsecIfPol(mo, **item["infraRsMacsecIfPol"])
-                if "infraRsAttEntP" in item:
-                    cobra.model.infra.RsAttEntP(mo, **item["infraRsAttEntP"])
-                if "infraRsLinkFlapPol" in item:
-                    cobra.model.infra.RsLinkFlapPol(mo, **item["infraRsLinkFlapPol"])
-                if "infraRsCoppIfPol" in item:
-                    cobra.model.infra.RsCoppIfPol(mo, **item["infraRsCoppIfPol"])
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            FuncP = cobra.model.infra.FuncP(Infra)
+            for infraSpAccPortGrp in value:
+                SpAccPortGrp = cobra.model.infra.SpAccPortGrp(FuncP, **infraSpAccPortGrp)
+                self.config.addMo(SpAccPortGrp)
+                if "infraRsHIfPol" in infraSpAccPortGrp:
+                    RsHIfPol = cobra.model.infra.RsHIfPol(SpAccPortGrp, **infraSpAccPortGrp["infraRsHIfPol"])
+                    self.config.addMo(RsHIfPol)
+                if "infraRsCdpIfPol" in infraSpAccPortGrp:
+                    RsCdpIfPol = cobra.model.infra.RsCdpIfPol(SpAccPortGrp, **infraSpAccPortGrp["infraRsCdpIfPol"])
+                    self.config.addMo(RsCdpIfPol)
+                if "infraRsMacsecIfPol" in infraSpAccPortGrp:
+                    RsMacsecIfPol = cobra.model.infra.RsMacsecIfPol(SpAccPortGrp, **infraSpAccPortGrp["infraRsMacsecIfPol"])
+                    self.config.addMo(RsMacsecIfPol)
+                if "infraRsAttEntP" in infraSpAccPortGrp:
+                    RsAttEntP = cobra.model.infra.RsAttEntP(SpAccPortGrp, **infraSpAccPortGrp["infraRsAttEntP"])
+                    self.config.addMo(RsAttEntP)
+                if "infraRsLinkFlapPol" in infraSpAccPortGrp:
+                    RsLinkFlapPol = cobra.model.infra.RsLinkFlapPol(SpAccPortGrp, **infraSpAccPortGrp["infraRsLinkFlapPol"])
+                    self.config.addMo(RsLinkFlapPol)
+                if "infraRsCoppIfPol" in infraSpAccPortGrp:
+                    RsCoppIfPol = cobra.model.infra.RsCoppIfPol(SpAccPortGrp, **infraSpAccPortGrp["infraRsCoppIfPol"])
+                    self.config.addMo(RsCoppIfPol)
         except Exception as e:
             self._result.log = "[infraSpAccPortGrpError]: " + str(e)
 
@@ -1497,8 +1315,10 @@ class CobraClass:
         Fabric > Access Policies > Interfaces > Leaf Interfaces > Profiles
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
             for infraAccPortP in value:
-                AccPortP = cobra.model.infra.AccPortP(self.__infra, **infraAccPortP)
+                AccPortP = cobra.model.infra.AccPortP(Infra, **infraAccPortP)
                 self.config.addMo(AccPortP)
                 if "infraHPortS" in infraAccPortP:
                     for infraHPortS in infraAccPortP["infraHPortS"]:
@@ -1506,16 +1326,12 @@ class CobraClass:
                         self.config.addMo(HPortS)
                         if "infraRsAccBaseGrp" in infraHPortS:
                             if check("tDn", infraHPortS["infraRsAccBaseGrp"]):
-                                RsAccBaseGrp = cobra.model.infra.RsAccBaseGrp(
-                                    HPortS, **infraHPortS["infraRsAccBaseGrp"]
-                                )
+                                RsAccBaseGrp = cobra.model.infra.RsAccBaseGrp(HPortS, **infraHPortS["infraRsAccBaseGrp"])
                                 self.config.addMo(RsAccBaseGrp)
                         if "infraPortBlk" in infraHPortS:
                             for infraPortBlk in infraHPortS["infraPortBlk"]:
                                 if check("fromPort", infraPortBlk):
-                                    PortBlk = cobra.model.infra.PortBlk(
-                                        HPortS, **infraPortBlk
-                                    )
+                                    PortBlk = cobra.model.infra.PortBlk(HPortS, **infraPortBlk)
                                     self.config.addMo(PortBlk)
         except Exception as e:
             self._result.log = "[infraAccPortPError]: " + str(e)
@@ -1525,21 +1341,25 @@ class CobraClass:
         Fabric > Access Policies > Interfaces > Leaf Interfaces > FEX Profiles
         """
         try:
-            for item in value:
-                mo = cobra.model.infra.FexP(self.__infra, **item)
-                if "infraHPortS" in item:
-                    for port_s in item["infraHPortS"]:
-                        h_port_s = cobra.model.infra.HPortS(mo, **port_s)
-                        if "infraRsAccBaseGrp" in port_s:
-                            cobra.model.infra.RsAccBaseGrp(
-                                h_port_s, **port_s["infraRsAccBaseGrp"]
-                            )
-                        if "infraPortBlk" in port_s:
-                            for block in port_s["infraPortBlk"]:
-                                cobra.model.infra.PortBlk(h_port_s, **block)
-                if "infraFexBndlGrp" in item:
-                    cobra.model.infra.FexBndlGrp(mo, **item["infraFexBndlGrp"])
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for infraFexP in value:
+                FexP = cobra.model.infra.FexP(Infra, **infraFexP)
+                self.config.addMo(FexP)
+                if "infraHPortS" in infraFexP:
+                    for infraHPortS in infraFexP["infraHPortS"]:
+                        HPortS = cobra.model.infra.HPortS(FexP, **infraHPortS)
+                        self.config.addMo(HPortS)
+                        if "infraRsAccBaseGrp" in infraHPortS:
+                            RsAccBaseGrp = cobra.model.infra.RsAccBaseGrp(HPortS, **infraHPortS["infraRsAccBaseGrp"])
+                            self.config.addMo(RsAccBaseGrp)
+                        if "infraPortBlk" in infraHPortS:
+                            for block in infraHPortS["infraPortBlk"]:
+                                PortBlk = cobra.model.infra.PortBlk(HPortS, **block)
+                                self.config.addMo(PortBlk)
+                if "infraFexBndlGrp" in infraFexP:
+                    FexBndlGrp = cobra.model.infra.FexBndlGrp(FexP, **infraFexP["infraFexBndlGrp"])
+                    self.config.addMo(FexBndlGrp)
         except Exception as e:
             self._result.log = "[infraFexPError]: " + str(e)
 
@@ -1548,162 +1368,99 @@ class CobraClass:
         Fabric > Access Policies > Interfaces > Leaf Interfaces > Policy Groups > Access
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            FuncP = cobra.model.infra.FuncP(Infra)
             for infraAccPortGrp in value:
-                FuncP = cobra.model.infra.FuncP(self.__infra)
                 AccPortGrp = cobra.model.infra.AccPortGrp(FuncP, **infraAccPortGrp)
                 self.config.addMo(AccPortGrp)
                 if "infraRsAttEntP" in infraAccPortGrp:
                     if check("tDn", infraAccPortGrp["infraRsAttEntP"]):
-                        RsAttEntP = cobra.model.infra.RsAttEntP(
-                            AccPortGrp, **infraAccPortGrp["infraRsAttEntP"]
-                        )
+                        RsAttEntP = cobra.model.infra.RsAttEntP(AccPortGrp, **infraAccPortGrp["infraRsAttEntP"])
                         self.config.addMo(RsAttEntP)
                 if "infraRsStpIfPol" in infraAccPortGrp:
                     if check("tnStpIfPolName", infraAccPortGrp["infraRsStpIfPol"]):
-                        RsStpIfPol = cobra.model.infra.RsStpIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsStpIfPol"]
-                        )
+                        RsStpIfPol = cobra.model.infra.RsStpIfPol(AccPortGrp, **infraAccPortGrp["infraRsStpIfPol"])
                         self.config.addMo(RsStpIfPol)
                 if "infraRsQosLlfcIfPol" in infraAccPortGrp:
-                    if check(
-                        "tnQosLlfcIfPolName", infraAccPortGrp["infraRsQosLlfcIfPol"]
-                    ):
-                        RsQosLlfcIfPol = cobra.model.infra.RsQosLlfcIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsQosLlfcIfPol"]
-                        )
+                    if check("tnQosLlfcIfPolName", infraAccPortGrp["infraRsQosLlfcIfPol"]):
+                        RsQosLlfcIfPol = cobra.model.infra.RsQosLlfcIfPol(AccPortGrp, **infraAccPortGrp["infraRsQosLlfcIfPol"])
                         self.config.addMo(RsQosLlfcIfPol)
                 if "infraRsQosIngressDppIfPol" in infraAccPortGrp:
-                    if check(
-                        "tnQosDppPolName", infraAccPortGrp["infraRsQosIngressDppIfPol"]
-                    ):
-                        RsQosIngressDppIfPol = cobra.model.infra.RsQosIngressDppIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsQosIngressDppIfPol"]
-                        )
+                    if check("tnQosDppPolName", infraAccPortGrp["infraRsQosIngressDppIfPol"]):
+                        RsQosIngressDppIfPol = cobra.model.infra.RsQosIngressDppIfPol(AccPortGrp, **infraAccPortGrp["infraRsQosIngressDppIfPol"])
                         self.config.addMo(RsQosIngressDppIfPol)
                 if "infraRsStormctrlIfPol" in infraAccPortGrp:
-                    if check(
-                        "tnStormctrlIfPolName", infraAccPortGrp["infraRsStormctrlIfPol"]
-                    ):
-                        RsStormctrlIfPol = cobra.model.infra.RsStormctrlIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsStormctrlIfPol"]
-                        )
+                    if check("tnStormctrlIfPolName", infraAccPortGrp["infraRsStormctrlIfPol"]):
+                        RsStormctrlIfPol = cobra.model.infra.RsStormctrlIfPol(AccPortGrp, **infraAccPortGrp["infraRsStormctrlIfPol"])
                         self.config.addMo(RsStormctrlIfPol)
                 if "infraRsQosEgressDppIfPol" in infraAccPortGrp:
-                    if check(
-                        "tnQosDppPolName", infraAccPortGrp["infraRsQosEgressDppIfPol"]
-                    ):
-                        RsQosEgressDppIfPol = cobra.model.infra.RsQosEgressDppIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsQosEgressDppIfPol"]
-                        )
+                    if check("tnQosDppPolName", infraAccPortGrp["infraRsQosEgressDppIfPol"]):
+                        RsQosEgressDppIfPol = cobra.model.infra.RsQosEgressDppIfPol(AccPortGrp, **infraAccPortGrp["infraRsQosEgressDppIfPol"])
                         self.config.addMo(RsQosEgressDppIfPol)
                 if "infraRsMonIfInfraPol" in infraAccPortGrp:
-                    if check(
-                        "tnMonInfraPolName", infraAccPortGrp["infraRsMonIfInfraPol"]
-                    ):
-                        RsMonIfInfraPol = cobra.model.infra.RsMonIfInfraPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsMonIfInfraPol"]
-                        )
+                    if check("tnMonInfraPolName", infraAccPortGrp["infraRsMonIfInfraPol"]):
+                        RsMonIfInfraPol = cobra.model.infra.RsMonIfInfraPol(AccPortGrp, **infraAccPortGrp["infraRsMonIfInfraPol"])
                         self.config.addMo(RsMonIfInfraPol)
                 if "infraRsMcpIfPol" in infraAccPortGrp:
                     if check("tnMcpIfPolName", infraAccPortGrp["infraRsMcpIfPol"]):
-                        RsMcpIfPol = cobra.model.infra.RsMcpIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsMcpIfPol"]
-                        )
+                        RsMcpIfPol = cobra.model.infra.RsMcpIfPol(AccPortGrp, **infraAccPortGrp["infraRsMcpIfPol"])
                         self.config.addMo(RsMcpIfPol)
                 if "infraRsMacsecIfPol" in infraAccPortGrp:
-                    if check(
-                        "tnMacsecIfPolName", infraAccPortGrp["infraRsMacsecIfPol"]
-                    ):
-                        RsMacsecIfPol = cobra.model.infra.RsMacsecIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsMacsecIfPol"]
-                        )
+                    if check("tnMacsecIfPolName", infraAccPortGrp["infraRsMacsecIfPol"]):
+                        RsMacsecIfPol = cobra.model.infra.RsMacsecIfPol(AccPortGrp, **infraAccPortGrp["infraRsMacsecIfPol"])
                         self.config.addMo(RsMacsecIfPol)
                 if "infraRsQosSdIfPol" in infraAccPortGrp:
                     if check("tnQosSdIfPolName", infraAccPortGrp["infraRsQosSdIfPol"]):
-                        RsQosSdIfPol = cobra.model.infra.RsQosSdIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsQosSdIfPol"]
-                        )
+                        RsQosSdIfPol = cobra.model.infra.RsQosSdIfPol(AccPortGrp, **infraAccPortGrp["infraRsQosSdIfPol"])
                         self.config.addMo(RsQosSdIfPol)
                 if "infraRsCdpIfPol" in infraAccPortGrp:
                     if check("tnCdpIfPolName", infraAccPortGrp["infraRsCdpIfPol"]):
-                        RsCdpIfPol = cobra.model.infra.RsCdpIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsCdpIfPol"]
-                        )
+                        RsCdpIfPol = cobra.model.infra.RsCdpIfPol(AccPortGrp, **infraAccPortGrp["infraRsCdpIfPol"])
                         self.config.addMo(RsCdpIfPol)
                 if "infraRsL2IfPol" in infraAccPortGrp:
                     if check("tnL2IfPolName", infraAccPortGrp["infraRsL2IfPol"]):
-                        RsL2IfPol = cobra.model.infra.RsL2IfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsL2IfPol"]
-                        )
+                        RsL2IfPol = cobra.model.infra.RsL2IfPol(AccPortGrp, **infraAccPortGrp["infraRsL2IfPol"])
                         self.config.addMo(RsL2IfPol)
                 if "infraRsQosDppIfPol" in infraAccPortGrp:
                     if check("tnQosDppPolName", infraAccPortGrp["infraRsQosDppIfPol"]):
-                        RsQosDppIfPol = cobra.model.infra.RsQosDppIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsQosDppIfPol"]
-                        )
+                        RsQosDppIfPol = cobra.model.infra.RsQosDppIfPol(AccPortGrp, **infraAccPortGrp["infraRsQosDppIfPol"])
                         self.config.addMo(RsQosDppIfPol)
                 if "infraRsCoppIfPol" in infraAccPortGrp:
                     if check("tnCoppIfPolName", infraAccPortGrp["infraRsCoppIfPol"]):
-                        RsCoppIfPol = cobra.model.infra.RsCoppIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsCoppIfPol"]
-                        )
+                        RsCoppIfPol = cobra.model.infra.RsCoppIfPol(AccPortGrp, **infraAccPortGrp["infraRsCoppIfPol"])
                         self.config.addMo(RsCoppIfPol)
                 if "infraRsDwdmIfPol" in infraAccPortGrp:
                     if check("tnDwdmIfPolName", infraAccPortGrp["infraRsDwdmIfPol"]):
-                        RsDwdmIfPol = cobra.model.infra.RsDwdmIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsDwdmIfPol"]
-                        )
+                        RsDwdmIfPol = cobra.model.infra.RsDwdmIfPol(AccPortGrp, **infraAccPortGrp["infraRsDwdmIfPol"])
                         self.config.addMo(RsDwdmIfPol)
                 if "infraRsLinkFlapPol" in infraAccPortGrp:
-                    if check(
-                        "tnFabricLinkFlapPolName", infraAccPortGrp["infraRsLinkFlapPol"]
-                    ):
-                        RsLinkFlapPol = cobra.model.infra.RsLinkFlapPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsLinkFlapPol"]
-                        )
+                    if check("tnFabricLinkFlapPolName", infraAccPortGrp["infraRsLinkFlapPol"]):
+                        RsLinkFlapPol = cobra.model.infra.RsLinkFlapPol(AccPortGrp, **infraAccPortGrp["infraRsLinkFlapPol"])
                         self.config.addMo(RsLinkFlapPol)
                 if "infraRsLldpIfPol" in infraAccPortGrp:
                     if check("tnLldpIfPolName", infraAccPortGrp["infraRsLldpIfPol"]):
-                        RsLldpIfPol = cobra.model.infra.RsLldpIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsLldpIfPol"]
-                        )
+                        RsLldpIfPol = cobra.model.infra.RsLldpIfPol(AccPortGrp, **infraAccPortGrp["infraRsLldpIfPol"])
                         self.config.addMo(RsLldpIfPol)
                 if "infraRsFcIfPol" in infraAccPortGrp:
                     if check("tnFcIfPolName", infraAccPortGrp["infraRsFcIfPol"]):
-                        RsFcIfPol = cobra.model.infra.RsFcIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsFcIfPol"]
-                        )
+                        RsFcIfPol = cobra.model.infra.RsFcIfPol(AccPortGrp, **infraAccPortGrp["infraRsFcIfPol"])
                         self.config.addMo(RsFcIfPol)
                 if "infraRsQosPfcIfPol" in infraAccPortGrp:
-                    if check(
-                        "tnQosPfcIfPolName", infraAccPortGrp["infraRsQosPfcIfPol"]
-                    ):
-                        RsQosPfcIfPol = cobra.model.infra.RsQosPfcIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsQosPfcIfPol"]
-                        )
+                    if check("tnQosPfcIfPolName", infraAccPortGrp["infraRsQosPfcIfPol"]):
+                        RsQosPfcIfPol = cobra.model.infra.RsQosPfcIfPol(AccPortGrp, **infraAccPortGrp["infraRsQosPfcIfPol"])
                         self.config.addMo(RsQosPfcIfPol)
                 if "infraRsHIfPol" in infraAccPortGrp:
                     if check("tnFabricHIfPolName", infraAccPortGrp["infraRsHIfPol"]):
-                        RsHIfPol = cobra.model.infra.RsHIfPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsHIfPol"]
-                        )
+                        RsHIfPol = cobra.model.infra.RsHIfPol(AccPortGrp, **infraAccPortGrp["infraRsHIfPol"])
                         self.config.addMo(RsHIfPol)
                 if "infraRsL2PortSecurityPol" in infraAccPortGrp:
-                    if check(
-                        "tnL2PortSecurityPolName",
-                        infraAccPortGrp["infraRsL2PortSecurityPol"],
-                    ):
-                        RsL2PortSecurityPol = cobra.model.infra.RsL2PortSecurityPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsL2PortSecurityPol"]
-                        )
+                    if check("tnL2PortSecurityPolName", infraAccPortGrp["infraRsL2PortSecurityPol"]):
+                        RsL2PortSecurityPol = cobra.model.infra.RsL2PortSecurityPol(AccPortGrp, **infraAccPortGrp["infraRsL2PortSecurityPol"])
                         self.config.addMo(RsL2PortSecurityPol)
                 if "infraRsL2PortAuthPol" in infraAccPortGrp:
-                    if check(
-                        "tnL2PortAuthPolName", infraAccPortGrp["infraRsL2PortAuthPol"]
-                    ):
-                        RsL2PortAuthPol = cobra.model.infra.RsL2PortAuthPol(
-                            AccPortGrp, **infraAccPortGrp["infraRsL2PortAuthPol"]
-                        )
+                    if check("tnL2PortAuthPolName", infraAccPortGrp["infraRsL2PortAuthPol"]):
+                        RsL2PortAuthPol = cobra.model.infra.RsL2PortAuthPol(AccPortGrp, **infraAccPortGrp["infraRsL2PortAuthPol"])
                         self.config.addMo(RsL2PortAuthPol)
         except Exception as e:
             self._result.log = "[infraAccPortGrpError]: " + str(e)
@@ -1713,162 +1470,99 @@ class CobraClass:
         Fabric > Access Policies > Interfaces > Leaf Interfaces > Policy Groups > PC or VPC
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            FuncP = cobra.model.infra.FuncP(Infra)
             for infraAccBndlGrp in value:
-                FuncP = cobra.model.infra.FuncP(self.__infra)
                 AccBndlGrp = cobra.model.infra.AccBndlGrp(FuncP, **infraAccBndlGrp)
                 self.config.addMo(AccBndlGrp)
                 if "infraRsAttEntP" in infraAccBndlGrp:
                     if check("tDn", infraAccBndlGrp["infraRsAttEntP"]):
-                        RsAttEntP = cobra.model.infra.RsAttEntP(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsAttEntP"]
-                        )
+                        RsAttEntP = cobra.model.infra.RsAttEntP(AccBndlGrp, **infraAccBndlGrp["infraRsAttEntP"])
                         self.config.addMo(RsAttEntP)
                 if "infraRsStpIfPol" in infraAccBndlGrp:
                     if check("tnStpIfPolName", infraAccBndlGrp["infraRsStpIfPol"]):
-                        RsStpIfPol = cobra.model.infra.RsStpIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsStpIfPol"]
-                        )
+                        RsStpIfPol = cobra.model.infra.RsStpIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsStpIfPol"])
                         self.config.addMo(RsStpIfPol)
                 if "infraRsQosLlfcIfPol" in infraAccBndlGrp:
-                    if check(
-                        "tnQosLlfcIfPolName", infraAccBndlGrp["infraRsQosLlfcIfPol"]
-                    ):
-                        RsQosLlfcIfPol = cobra.model.infra.RsQosLlfcIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsQosLlfcIfPol"]
-                        )
+                    if check("tnQosLlfcIfPolName", infraAccBndlGrp["infraRsQosLlfcIfPol"]):
+                        RsQosLlfcIfPol = cobra.model.infra.RsQosLlfcIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsQosLlfcIfPol"])
                         self.config.addMo(RsQosLlfcIfPol)
                 if "infraRsQosIngressDppIfPol" in infraAccBndlGrp:
-                    if check(
-                        "tnQosDppPolName", infraAccBndlGrp["infraRsQosIngressDppIfPol"]
-                    ):
-                        RsQosIngressDppIfPol = cobra.model.infra.RsQosIngressDppIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsQosIngressDppIfPol"]
-                        )
+                    if check("tnQosDppPolName", infraAccBndlGrp["infraRsQosIngressDppIfPol"]):
+                        RsQosIngressDppIfPol = cobra.model.infra.RsQosIngressDppIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsQosIngressDppIfPol"])
                         self.config.addMo(RsQosIngressDppIfPol)
                 if "infraRsStormctrlIfPol" in infraAccBndlGrp:
-                    if check(
-                        "tnStormctrlIfPolName", infraAccBndlGrp["infraRsStormctrlIfPol"]
-                    ):
-                        RsStormctrlIfPol = cobra.model.infra.RsStormctrlIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsStormctrlIfPol"]
-                        )
+                    if check("tnStormctrlIfPolName", infraAccBndlGrp["infraRsStormctrlIfPol"]):
+                        RsStormctrlIfPol = cobra.model.infra.RsStormctrlIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsStormctrlIfPol"])
                         self.config.addMo(RsStormctrlIfPol)
                 if "infraRsQosEgressDppIfPol" in infraAccBndlGrp:
-                    if check(
-                        "tnQosDppPolName", infraAccBndlGrp["infraRsQosEgressDppIfPol"]
-                    ):
-                        RsQosEgressDppIfPol = cobra.model.infra.RsQosEgressDppIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsQosEgressDppIfPol"]
-                        )
+                    if check("tnQosDppPolName", infraAccBndlGrp["infraRsQosEgressDppIfPol"]):
+                        RsQosEgressDppIfPol = cobra.model.infra.RsQosEgressDppIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsQosEgressDppIfPol"])
                         self.config.addMo(RsQosEgressDppIfPol)
                 if "infraRsMonIfInfraPol" in infraAccBndlGrp:
-                    if check(
-                        "tnMonInfraPolName", infraAccBndlGrp["infraRsMonIfInfraPol"]
-                    ):
-                        RsMonIfInfraPol = cobra.model.infra.RsMonIfInfraPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsMonIfInfraPol"]
-                        )
+                    if check("tnMonInfraPolName", infraAccBndlGrp["infraRsMonIfInfraPol"]):
+                        RsMonIfInfraPol = cobra.model.infra.RsMonIfInfraPol(AccBndlGrp, **infraAccBndlGrp["infraRsMonIfInfraPol"])
                         self.config.addMo(RsMonIfInfraPol)
                 if "infraRsMcpIfPol" in infraAccBndlGrp:
                     if check("tnMcpIfPolName", infraAccBndlGrp["infraRsMcpIfPol"]):
-                        RsMcpIfPol = cobra.model.infra.RsMcpIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsMcpIfPol"]
-                        )
+                        RsMcpIfPol = cobra.model.infra.RsMcpIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsMcpIfPol"])
                         self.config.addMo(RsMcpIfPol)
                 if "infraRsMacsecIfPol" in infraAccBndlGrp:
-                    if check(
-                        "tnMacsecIfPolName", infraAccBndlGrp["infraRsMacsecIfPol"]
-                    ):
-                        RsMacsecIfPol = cobra.model.infra.RsMacsecIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsMacsecIfPol"]
-                        )
+                    if check("tnMacsecIfPolName", infraAccBndlGrp["infraRsMacsecIfPol"]):
+                        RsMacsecIfPol = cobra.model.infra.RsMacsecIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsMacsecIfPol"])
                         self.config.addMo(RsMacsecIfPol)
                 if "infraRsQosSdIfPol" in infraAccBndlGrp:
                     if check("tnQosSdIfPolName", infraAccBndlGrp["infraRsQosSdIfPol"]):
-                        RsQosSdIfPol = cobra.model.infra.RsQosSdIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsQosSdIfPol"]
-                        )
+                        RsQosSdIfPol = cobra.model.infra.RsQosSdIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsQosSdIfPol"])
                         self.config.addMo(RsQosSdIfPol)
                 if "infraRsCdpIfPol" in infraAccBndlGrp:
                     if check("tnCdpIfPolName", infraAccBndlGrp["infraRsCdpIfPol"]):
-                        RsCdpIfPol = cobra.model.infra.RsCdpIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsCdpIfPol"]
-                        )
+                        RsCdpIfPol = cobra.model.infra.RsCdpIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsCdpIfPol"])
                         self.config.addMo(RsCdpIfPol)
                 if "infraRsL2IfPol" in infraAccBndlGrp:
                     if check("tnL2IfPolName", infraAccBndlGrp["infraRsL2IfPol"]):
-                        RsL2IfPol = cobra.model.infra.RsL2IfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsL2IfPol"]
-                        )
+                        RsL2IfPol = cobra.model.infra.RsL2IfPol(AccBndlGrp, **infraAccBndlGrp["infraRsL2IfPol"])
                         self.config.addMo(RsL2IfPol)
                 if "infraRsQosDppIfPol" in infraAccBndlGrp:
                     if check("tnQosDppPolName", infraAccBndlGrp["infraRsQosDppIfPol"]):
-                        RsQosDppIfPol = cobra.model.infra.RsQosDppIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsQosDppIfPol"]
-                        )
+                        RsQosDppIfPol = cobra.model.infra.RsQosDppIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsQosDppIfPol"])
                         self.config.addMo(RsQosDppIfPol)
                 if "infraRsCoppIfPol" in infraAccBndlGrp:
                     if check("tnCoppIfPolName", infraAccBndlGrp["infraRsCoppIfPol"]):
-                        RsCoppIfPol = cobra.model.infra.RsCoppIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsCoppIfPol"]
-                        )
+                        RsCoppIfPol = cobra.model.infra.RsCoppIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsCoppIfPol"])
                         self.config.addMo(RsCoppIfPol)
                 if "infraRsLldpIfPol" in infraAccBndlGrp:
                     if check("tnLldpIfPolName", infraAccBndlGrp["infraRsLldpIfPol"]):
-                        RsLldpIfPol = cobra.model.infra.RsLldpIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsLldpIfPol"]
-                        )
+                        RsLldpIfPol = cobra.model.infra.RsLldpIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsLldpIfPol"])
                         self.config.addMo(RsLldpIfPol)
                 if "infraRsFcIfPol" in infraAccBndlGrp:
                     if check("tnFcIfPolName", infraAccBndlGrp["infraRsFcIfPol"]):
-                        RsFcIfPol = cobra.model.infra.RsFcIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsFcIfPol"]
-                        )
+                        RsFcIfPol = cobra.model.infra.RsFcIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsFcIfPol"])
                         self.config.addMo(RsFcIfPol)
                 if "infraRsQosPfcIfPol" in infraAccBndlGrp:
-                    if check(
-                        "tnQosPfcIfPolName", infraAccBndlGrp["infraRsQosPfcIfPol"]
-                    ):
-                        RsQosPfcIfPol = cobra.model.infra.RsQosPfcIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsQosPfcIfPol"]
-                        )
+                    if check("tnQosPfcIfPolName", infraAccBndlGrp["infraRsQosPfcIfPol"]):
+                        RsQosPfcIfPol = cobra.model.infra.RsQosPfcIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsQosPfcIfPol"])
                         self.config.addMo(RsQosPfcIfPol)
                 if "infraRsHIfPol" in infraAccBndlGrp:
                     if check("tnFabricHIfPolName", infraAccBndlGrp["infraRsHIfPol"]):
-                        RsHIfPol = cobra.model.infra.RsHIfPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsHIfPol"]
-                        )
+                        RsHIfPol = cobra.model.infra.RsHIfPol(AccBndlGrp, **infraAccBndlGrp["infraRsHIfPol"])
                         self.config.addMo(RsHIfPol)
                 if "infraRsL2PortSecurityPol" in infraAccBndlGrp:
-                    if check(
-                        "tnL2PortSecurityPolName",
-                        infraAccBndlGrp["infraRsL2PortSecurityPol"],
-                    ):
-                        RsL2PortSecurityPol = cobra.model.infra.RsL2PortSecurityPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsL2PortSecurityPol"]
-                        )
+                    if check("tnL2PortSecurityPolName", infraAccBndlGrp["infraRsL2PortSecurityPol"]):
+                        RsL2PortSecurityPol = cobra.model.infra.RsL2PortSecurityPol(AccBndlGrp, **infraAccBndlGrp["infraRsL2PortSecurityPol"])
                         self.config.addMo(RsL2PortSecurityPol)
                 if "infraRsL2PortAuthPol" in infraAccBndlGrp:
-                    if check(
-                        "tnL2PortAuthPolName", infraAccBndlGrp["infraRsL2PortAuthPol"]
-                    ):
-                        RsL2PortAuthPol = cobra.model.infra.RsL2PortAuthPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsL2PortAuthPol"]
-                        )
+                    if check("tnL2PortAuthPolName", infraAccBndlGrp["infraRsL2PortAuthPol"]):
+                        RsL2PortAuthPol = cobra.model.infra.RsL2PortAuthPol(AccBndlGrp, **infraAccBndlGrp["infraRsL2PortAuthPol"])
                         self.config.addMo(RsL2PortAuthPol)
                 if "infraRsLacpPol" in infraAccBndlGrp:
                     if check("tnLacpLagPolName", infraAccBndlGrp["infraRsLacpPol"]):
-                        RsLacpPol = cobra.model.infra.RsLacpPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsLacpPol"]
-                        )
+                        RsLacpPol = cobra.model.infra.RsLacpPol(AccBndlGrp, **infraAccBndlGrp["infraRsLacpPol"])
                         self.config.addMo(RsLacpPol)
                 if "infraRsLinkFlapPol" in infraAccBndlGrp:
-                    if check(
-                        "tnFabricLinkFlapPolName", infraAccBndlGrp["infraRsLinkFlapPol"]
-                    ):
-                        RsLinkFlapPol = cobra.model.infra.RsLinkFlapPol(
-                            AccBndlGrp, **infraAccBndlGrp["infraRsLinkFlapPol"]
-                        )
+                    if check("tnFabricLinkFlapPolName", infraAccBndlGrp["infraRsLinkFlapPol"]):
+                        RsLinkFlapPol = cobra.model.infra.RsLinkFlapPol(AccBndlGrp, **infraAccBndlGrp["infraRsLinkFlapPol"])
                         self.config.addMo(RsLinkFlapPol)
         except Exception as e:
             self._result.log = "[infraAccBndlGrpError]: " + str(e)
@@ -1878,25 +1572,22 @@ class CobraClass:
         Fabric > Access Policies > Policies > Switch > Virtual Port Channel default
         """
         try:
-            for item in value:
-                fabric_inst = cobra.model.fabric.Inst(self.__uni)
-                mo = cobra.model.fabric.ProtPol(fabric_inst, **item)
-                if "fabricExplicitGEp" in item:
-                    for explicit_gep in item["fabricExplicitGEp"]:
-                        fabric_explicit_gep = cobra.model.fabric.ExplicitGEp(
-                            mo, **explicit_gep
-                        )
-                        if "fabricRsVpcInstPol" in explicit_gep:
-                            cobra.model.fabric.RsVpcInstPol(
-                                fabric_explicit_gep,
-                                **explicit_gep["fabricRsVpcInstPol"],
-                            )
-                        if "fabricNodePEp" in explicit_gep:
-                            for node_pep in explicit_gep["fabricNodePEp"]:
-                                cobra.model.fabric.NodePEp(
-                                    fabric_explicit_gep, **node_pep
-                                )
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.fabric.Inst(Uni)
+            for fabricProtPol in value:
+                ProtPol = cobra.model.fabric.ProtPol(Inst, **fabricProtPol)
+                self.config.addMo(ProtPol)
+                if "fabricExplicitGEp" in fabricProtPol:
+                    for fabricExplicitGEp in fabricProtPol["fabricExplicitGEp"]:
+                        ExplicitGEp = cobra.model.fabric.ExplicitGEp(ProtPol, **fabricExplicitGEp)
+                        self.config.addMo(ExplicitGEp)
+                        if "fabricRsVpcInstPol" in fabricExplicitGEp:
+                            RsVpcInstPol = cobra.model.fabric.RsVpcInstPol(ExplicitGEp, **fabricExplicitGEp["fabricRsVpcInstPol"])
+                            self.config.addMo(RsVpcInstPol)
+                        if "fabricNodePEp" in fabricExplicitGEp:
+                            for fabricNodePEp in fabricExplicitGEp["fabricNodePEp"]:
+                                NodePEp = cobra.model.fabric.NodePEp(ExplicitGEp, **fabricNodePEp)
+                                self.config.addMo(NodePEp)
         except Exception as e:
             self._result.log = "[fabricProtPolError]: " + str(e)
 
@@ -1905,9 +1596,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > Link Level
         """
         try:
-            for item in value:
-                mo = cobra.model.fabric.HIfPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for fabricHIfPol in value:
+                HIfPol = cobra.model.fabric.HIfPol(Infra, **fabricHIfPol)
+                self.config.addMo(HIfPol)
         except Exception as e:
             self._result.log = "[fabricHIfPolError]: " + str(e)
 
@@ -1916,9 +1609,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > Priority Flow Control
         """
         try:
-            for item in value:
-                mo = cobra.model.qos.PfcIfPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for qosPfcIfPol in value:
+                PfcIfPol = cobra.model.qos.PfcIfPol(Infra, **qosPfcIfPol)
+                self.config.addMo(PfcIfPol)
         except Exception as e:
             self._result.log = "[qosPfcIfPolError]: " + str(e)
 
@@ -1927,9 +1622,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > CDP Interface
         """
         try:
-            for item in value:
-                mo = cobra.model.cdp.IfPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for cdpIfPol in value:
+                IfPol = cobra.model.cdp.IfPol(Infra, **cdpIfPol)
+                self.config.addMo(IfPol)
         except Exception as e:
             self._result.log = "[cdpIfPolError]: " + str(e)
 
@@ -1938,9 +1635,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > LLDP Interface
         """
         try:
-            for item in value:
-                mo = cobra.model.lldp.IfPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for lldpIfPol in value:
+                IfPol = cobra.model.lldp.IfPol(Infra, **lldpIfPol)
+                self.config.addMo(IfPol)
         except Exception as e:
             self._result.log = "[lldpIfPolError]: " + str(e)
 
@@ -1949,9 +1648,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > Port Channel
         """
         try:
-            for item in value:
-                mo = cobra.model.lacp.LagPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for lacpLagPol in value:
+                LagPol = cobra.model.lacp.LagPol(Infra, **lacpLagPol)
+                self.config.addMo(LagPol)
         except Exception as e:
             self._result.log = "[lacpLagPolError]: " + str(e)
 
@@ -1960,9 +1661,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > Spanning Tree Interface
         """
         try:
-            for item in value:
-                mo = cobra.model.stp.IfPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for stpIfPol in value:
+                IfPol = cobra.model.stp.IfPol(Infra, **stpIfPol)
+                self.config.addMo(IfPol)
         except Exception as e:
             self._result.log = "[stpIfPolError]: " + str(e)
 
@@ -1971,9 +1674,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > Storm Control
         """
         try:
-            for item in value:
-                mo = cobra.model.stormctrl.IfPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for stormctrlIfPol in value:
+                IfPol = cobra.model.stormctrl.IfPol(Infra, **stormctrlIfPol)
+                self.config.addMo(IfPol)
         except Exception as e:
             self._result.log = "[stormctrlIfPolError]: " + str(e)
 
@@ -1982,9 +1687,11 @@ class CobraClass:
         Fabric > Access Policies > Policies > Interface > MCP Interface
         """
         try:
-            for item in value:
-                mo = cobra.model.mcp.IfPol(self.__infra, **item)
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            for mcpIfPol in value:
+                IfPol = cobra.model.mcp.IfPol(Infra, **mcpIfPol)
+                self.config.addMo(IfPol)
         except Exception as e:
             self._result.log = "[mcpIfPolError]: " + str(e)
 
@@ -1993,10 +1700,10 @@ class CobraClass:
         Fabric > Access Policies > Policies > Global > Attachable Access Entity Profiles
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
             for infraAttEntityP in value:
-                AttEntityP = cobra.model.infra.AttEntityP(
-                    self.__infra, **infraAttEntityP
-                )
+                AttEntityP = cobra.model.infra.AttEntityP(Infra, **infraAttEntityP)
                 self.config.addMo(AttEntityP)
                 if "infraRsDomP" in infraAttEntityP:
                     for infraRsDomP in infraAttEntityP["infraRsDomP"]:
@@ -2010,8 +1717,10 @@ class CobraClass:
         Fabric > Access Policies > Pools > VLAN
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
             for fvnsVlanInstP in value:
-                VlanInstP = cobra.model.fvns.VlanInstP(self.__infra, **fvnsVlanInstP)
+                VlanInstP = cobra.model.fvns.VlanInstP(Infra, **fvnsVlanInstP)
                 self.config.addMo(VlanInstP)
                 if "fvnsEncapBlk" in fvnsVlanInstP:
                     for fvnsEncapBlk in fvnsVlanInstP["fvnsEncapBlk"]:
@@ -2025,13 +1734,12 @@ class CobraClass:
         Fabric > Access Policies > Physical and External Domains > Physical Domain
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
             for physDomP in value:
-                DomP = cobra.model.phys.DomP(self.__uni, **physDomP)
+                DomP = cobra.model.phys.DomP(Uni, **physDomP)
                 self.config.addMo(DomP)
                 if "infraRsVlanNs" in physDomP:
-                    RsVlanNs = cobra.model.infra.RsVlanNs(
-                        DomP, **physDomP["infraRsVlanNs"]
-                    )
+                    RsVlanNs = cobra.model.infra.RsVlanNs(DomP, **physDomP["infraRsVlanNs"])
                     self.config.addMo(RsVlanNs)
         except Exception as e:
             self._result.log = "[physDomPError]: " + str(e)
@@ -2041,11 +1749,13 @@ class CobraClass:
         Fabric > Access Policies > Physical and External Domains > L3 Domains
         """
         try:
-            for item in value:
-                mo = cobra.model.l3ext.DomP(self.__uni, **item)
-                if "infraRsVlanNs" in item:
-                    cobra.model.infra.RsVlanNs(mo, **item["infraRsVlanNs"])
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            for l3extDomP in value:
+                DomP = cobra.model.l3ext.DomP(Uni, **l3extDomP)
+                self.config.addMo(DomP)
+                if "infraRsVlanNs" in l3extDomP:
+                    RsVlanNs = cobra.model.infra.RsVlanNs(DomP, **l3extDomP["infraRsVlanNs"])
+                    self.config.addMo(RsVlanNs)
         except Exception as e:
             self._result.log = "[l3extDomPError]: " + str(e)
 
@@ -2054,11 +1764,13 @@ class CobraClass:
         Fabric > Access Policies > Physical and External Domains > External Bridged Domains
         """
         try:
-            for item in value:
-                mo = cobra.model.l2ext.DomP(self.__uni, **item)
-                if "infraRsVlanNs" in item:
-                    cobra.model.infra.RsVlanNs(mo, **item["infraRsVlanNs"])
-                self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            for l2extDomP in value:
+                DomP = cobra.model.l2ext.DomP(Uni, **l2extDomP)
+                self.config.addMo(DomP)
+                if "infraRsVlanNs" in l2extDomP:
+                    RsVlanNs = cobra.model.infra.RsVlanNs(DomP, **l2extDomP["infraRsVlanNs"])
+                    self.config.addMo(RsVlanNs)
         except Exception as e:
             self._result.log = "[l2extDomPError]: " + str(e)
 
@@ -2067,8 +1779,9 @@ class CobraClass:
         System Settings > All Tenants
         """
         try:
+            Inst = cobra.model.fabric.Inst(self.__uni)
             for bgpInstPol in value:
-                InstPol = cobra.model.bgp.InstPol(self.__fabric_inst, **bgpInstPol)
+                InstPol = cobra.model.bgp.InstPol(Inst, **bgpInstPol)
                 if "bgpAsP" in bgpInstPol:
                     if check("asn", bgpInstPol["bgpAsP"]):
                         AsP = cobra.model.bgp.AsP(InstPol, **bgpInstPol["bgpAsP"])
@@ -2078,9 +1791,7 @@ class CobraClass:
                     self.config.addMo(RRP)
                     for bgpRRP in bgpInstPol["bgpRRP"]:
                         if "bgpRRNodePEp" in bgpRRP:
-                            RRNodePEp = cobra.model.bgp.RRNodePEp(
-                                RRP, **bgpRRP["bgpRRNodePEp"]
-                            )
+                            RRNodePEp = cobra.model.bgp.RRNodePEp(RRP, **bgpRRP["bgpRRNodePEp"])
                             self.config.addMo(RRNodePEp)
                 if "ExtRRP" in bgpInstPol:
                     ExtRRP = cobra.model.bgp.ExtRRP(InstPol)
@@ -2095,7 +1806,8 @@ class CobraClass:
         System Settings > COOP Group
         """
         try:
-            mo = cobra.model.coop.Pol(self.__fabric_inst, **value)
+            Inst = cobra.model.fabric.Inst(self.__uni)
+            mo = cobra.model.coop.Pol(Inst, **value)
             self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[coopPolError]: " + str(e)
@@ -2105,7 +1817,8 @@ class CobraClass:
         System Settings > Date and Time
         """
         try:
-            mo = cobra.model.datetime.Format(self.__fabric_inst, **value)
+            Inst = cobra.model.fabric.Inst(self.__uni)
+            mo = cobra.model.datetime.Format(Inst, **value)
             self.config.addMo(mo)
         except Exception as e:
             self._result.log = "[datetimeFormatError]: " + str(e)
@@ -2147,8 +1860,10 @@ class CobraClass:
         System Settings > Enpoint Controls > The endpoint loop protection
         """
         try:
-            mo = cobra.model.ep.LoopProtectP(self.__infra, **value)
-            self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            LoopProtectP = cobra.model.ep.LoopProtectP(Infra, **value)
+            self.config.addMo(LoopProtectP)
         except Exception as e:
             self._result.log = "[epLoopProtectPError]: " + str(e)
 
@@ -2157,8 +1872,10 @@ class CobraClass:
         System Settings > Enpoint Controls > Rogue EP Control
         """
         try:
-            mo = cobra.model.ep.ControlP(self.__infra, **value)
-            self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            ControlP = cobra.model.ep.ControlP(Infra, **value)
+            self.config.addMo(ControlP)
         except Exception as e:
             self._result.log = "[epControlPError]: " + str(e)
 
@@ -2167,8 +1884,10 @@ class CobraClass:
         System Settings > Enpoint Controls > IP Aging
         """
         try:
-            mo = cobra.model.ep.IpAgingP(self.__infra, **value)
-            self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            IpAgingP = cobra.model.ep.IpAgingP(Infra, **value)
+            self.config.addMo(IpAgingP)
         except Exception as e:
             self._result.log = "[epIpAgingPError]: " + str(e)
 
@@ -2177,8 +1896,10 @@ class CobraClass:
         System Settings > Fabric-Wide Settings
         """
         try:
-            mo = cobra.model.infra.SetPol(self.__infra, **value)
-            self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            SetPol = cobra.model.infra.SetPol(Infra, **value)
+            self.config.addMo(SetPol)
         except Exception as e:
             self._result.log = "[infraSetPolError]: " + str(e)
 
@@ -2187,8 +1908,10 @@ class CobraClass:
         System Settings > ISIS Policy
         """
         try:
-            mo = cobra.model.isis.DomPol(self.__fabric_inst, **value)
-            self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.fabric.Inst(Uni)
+            DomPol = cobra.model.isis.DomPol(Inst, **value)
+            self.config.addMo(DomPol)
         except Exception as e:
             self._result.log = "[isisDomPolError]: " + str(e)
 
@@ -2197,8 +1920,10 @@ class CobraClass:
         System Settings > Port Tracking
         """
         try:
-            mo = cobra.model.infra.PortTrackPol(self.__infra, **value)
-            self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            PortTrackPol = cobra.model.infra.PortTrackPol(Infra, **value)
+            self.config.addMo(PortTrackPol)
         except Exception as e:
             self._result.log = "[infraPortTrackPolError]: " + str(e)
 
@@ -2207,9 +1932,11 @@ class CobraClass:
         Fabric > Access Policies > Global > MCP Instance Policy default
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
             for mcpInstPol in value:
-                mo = cobra.model.mcp.InstPol(self.__infra, **mcpInstPol)
-                self.config.addMo(mo)
+                InstPol = cobra.model.mcp.InstPol(Infra, **mcpInstPol)
+                self.config.addMo(InstPol)
         except Exception as e:
             self._result.log = "[mcpInstPolPolError]: " + str(e)
 
@@ -2218,9 +1945,11 @@ class CobraClass:
         Fabric > Fabric Policies > Policies > Monitoring > Fabric Node Controls > default
         """
         try:
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.fabric.Inst(Uni)
             for fabricNodeControl in value:
-                mo = cobra.model.fabric.NodeControl(self.__fabric_inst, **fabricNodeControl)
-                self.config.addMo(mo)
+                NodeControl = cobra.model.fabric.NodeControl(Inst, **fabricNodeControl)
+                self.config.addMo(NodeControl)
         except Exception as e:
             self._result.log = "[fabricNodeControlError]: " + str(e)
 
@@ -2229,7 +1958,8 @@ class CobraClass:
         Fabric > Fabric Policies > Policies > Geolocation
         """
         try:
-            Inst = cobra.model.fabric.Inst(self.__uni)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.fabric.Inst(Uni)
             for geoSite in value:
                 Site = cobra.model.geo.Site(Inst, **geoSite)
                 self.config.addMo(Site)
@@ -2247,37 +1977,18 @@ class CobraClass:
                                         self.config.addMo(Room)
                                         if "geoRow" in geoRoom:
                                             for geoRow in geoRoom["geoRow"]:
-                                                Row = cobra.model.geo.Row(
-                                                    Room, **geoRow
-                                                )
+                                                Row = cobra.model.geo.Row(Room, **geoRow)
                                                 self.config.addMo(Row)
                                                 if "geoRack" in geoRow:
                                                     for geoRack in geoRow["geoRack"]:
                                                         if check("name", geoRack):
-                                                            Rack = cobra.model.geo.Rack(
-                                                                Row, **geoRack
-                                                            )
+                                                            Rack = cobra.model.geo.Rack(Row, **geoRack)
                                                             self.config.addMo(Rack)
-                                                            if (
-                                                                "geoRsNodeLocation"
-                                                                in geoRack
-                                                            ):
-                                                                for (
-                                                                    geoRsNodeLocation
-                                                                ) in geoRack[
-                                                                    "geoRsNodeLocation"
-                                                                ]:
-                                                                    if check(
-                                                                        "tDn",
-                                                                        geoRsNodeLocation,
-                                                                    ):
-                                                                        RsNodeLocation = cobra.model.geo.RsNodeLocation(
-                                                                            Rack,
-                                                                            **geoRsNodeLocation,
-                                                                        )
-                                                                        self.config.addMo(
-                                                                            RsNodeLocation
-                                                                        )
+                                                            if "geoRsNodeLocation" in geoRack:
+                                                                for geoRsNodeLocation in geoRack["geoRsNodeLocation"]:
+                                                                    if check("tDn", geoRsNodeLocation):
+                                                                        RsNodeLocation = cobra.model.geo.RsNodeLocation(Rack, **geoRsNodeLocation)
+                                                                        self.config.addMo(RsNodeLocation)
         except Exception as e:
             self._result.log = "[fabricNodeControlError]: " + str(e)
 
@@ -2286,8 +1997,10 @@ class CobraClass:
         Fabric > Fabric Policies > Policies > Monitoring > Fabric Node Controls > default
         """
         try:
-            mo = cobra.model.latency.PtpMode(self.__fabric_inst, **value)
-            self.config.addMo(mo)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Inst = cobra.model.fabric.Inst(Uni)
+            PtpMode = cobra.model.latency.PtpMode(Inst, **value)
+            self.config.addMo(PtpMode)
         except Exception as e:
             self._result.log = "[latencyPtpModeError]: " + str(e)
 
@@ -2296,12 +2009,14 @@ class CobraClass:
         Fabric > Fabric Policies > Policies > Monitoring > Fabric Node Controls > default
         """
         try:
-            ZoneP = cobra.model.infrazone.ZoneP(self.__infra, **value)
-            if "infrazoneZone" in value:
-                for infrazoneZone in value["infrazoneZone"]:
-                    if "name" in infrazoneZone:
-                        Zone = cobra.model.infrazone.Zone(ZoneP, **infrazoneZone)
-                        self.config.addMo(Zone)
+            Uni = cobra.model.pol.Uni(self.__root)
+            Infra = cobra.model.infra.Infra(Uni)
+            ZoneP = cobra.model.infrazone.ZoneP(Infra, **value)
+            self.config.addMo(ZoneP)
+            for infrazoneZone in value:
+                if "Zone" in infrazoneZone:
+                    Zone = cobra.model.infrazone.Zone(ZoneP, **infrazoneZone["Zone"])
+                    self.config.addMo(Zone)
         except Exception as e:
             self._result.log = "[infrazoneZoneError]: " + str(e)
 
