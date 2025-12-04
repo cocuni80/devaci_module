@@ -132,5 +132,12 @@ pnpm-debug.log*
 /testing
 /formats
 notes.txt
-requirements.txt
 test.py
+
+#Outputs
+*.xml
+*.json
+.env_aci4
+.env_aci6
+active_aci6.py
+shutdown_aci4.py

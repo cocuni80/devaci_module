@@ -8,6 +8,7 @@
 
 """ACI module configuration for the ACI Python SDK (cobra)."""
 
+from optparse import Values
 import os
 import requests
 import urllib3
@@ -109,7 +110,7 @@ class DeployClass:
         self._secure = kwargs.get("secure", False)
         self.testing = kwargs.get("testing", False)
         self.logging = kwargs.get("logging", False)
-        self.render_to_xml = kwargs.get("render_to_xml", False)
+        self.render_to_xml = kwargs.get("render_to_xml", True)
         self.render_vars = kwargs.get("render_vars", False)
 
         # --------------   Controller Information
@@ -281,30 +282,26 @@ class DeployClass:
         Render variables
         """
         try:
-            input = self._variables.copy()
-            temp1 = dict()
-            if input.get("vars"):
-                for var in input["vars"]:
-                    temp1[var["name"]] = var
-            else:
+            data = self._variables.copy()
+            if "vars" not in data:
                 raise Exception("No 'vars' key found!")
+            vars = {v["name"]: v for v in data.pop("vars")}
+            data.pop("summary", None)
 
-            input.pop("summary")
-            input.pop("vars")
-
-            output = dict()
-            for key, value in input.items():
-                temp3 = list()
-                for value_dict in value:
-                    for var in self._vars:
-                        if var in value_dict:
-                            value_dict[var] = temp1.get(value_dict.get(var), None)
-                        else:
-                            raise Exception(f"No {var} variable found on {key} key!")
-                    temp3.append(value_dict)
-                output[key] = temp3
-            self._variables = output
-            #print(f"{self._variables}")
+            self._variables = {
+                key: [
+                    {
+                        **item,
+                        **{
+                            var: vars.get(item[var], item.get(var))
+                            for var in self._vars
+                            if var in item
+                        },
+                    }
+                    for item in values
+                ]
+                for key, values in data.items()
+            }
 
         except Exception as e:
             self._result.success = False
@@ -390,14 +387,35 @@ class DeployClass:
                         )
                     )
 
-    def save_output(self) -> None:
+    def save_output(self, name: str = "template") -> None:
         """
         Save indent Output in pretty format
         """
         if self._result.output:
             for key, value in self._result.output.items():
-                msg = f"\n-------------------> {key} output."
-                print(f"\x1b[1m\x1b[47;1m{msg}\x1b[0m")
+                msg = f"-> Output saved at {Path(key).with_suffix('.xml' if self.render_to_xml else '.json').absolute()}"
+                print(f"\x1b[33;1m{msg}\x1b[0m")
+
+                if self.render_to_xml:
+                    dom = xml.dom.minidom.parseString(value)
+                    pretty_xml = dom.toprettyxml(indent="\t")
+                    file = Path(key).with_suffix(".xml")
+                    with open(file, "w", encoding="utf-8") as f:
+                        f.write(pretty_xml)
+                else:
+                    pretty_json = json.dumps(value, indent=4, ensure_ascii=False)
+                    file = Path(key).with_suffix(".json")
+                    with open(file, "w", encoding="utf-8") as f:
+                        f.write(pretty_json)
+    
+    def save_output2(self, name: list = None) -> None:
+        """
+        Save indent Output in pretty format
+        """
+        if self._result.output:
+            for key, value in self._result.output.items():
+                msg = f"-> Output saved at {Path(key).with_suffix('.xml' if self.render_to_xml else '.json').absolute()}"
+                print(f"\x1b[33;1m{msg}\x1b[0m")
 
                 if self.render_to_xml:
                     dom = xml.dom.minidom.parseString(value)
