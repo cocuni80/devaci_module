@@ -1,16 +1,9 @@
 [
     {
-        "date":"05.04.2025_00.21.40",
-        "output":{
-            "create_tenants.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<polUni status='created,modified'><fvTenant descr='Test Tenant1' name='Tenant1' status='created,modified'><\/fvTenant><fvTenant descr='Test Tenant2' name='Tenant2' status='created,modified'><\/fvTenant><fvTenant descr='Test Tenant3' name='Tenant3' status='created,modified'><\/fvTenant><fvTenant descr='Test Tenant4' name='Tenant4' status='created,modified'><\/fvTenant><\/polUni>",
-            "create_tenant1.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<fvTenant descr='Testing' name='Tenant1' status='created,modified'><\/fvTenant>",
-            "create_tenant2.j2":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<fvTenant descr='Testing' name='Tenant2' status='created,modified'><\/fvTenant>"
-        },
-        "success":true,
-        "log":{
-            "create_tenants.j2":"[RenderClass]: create_tenants.j2 was validated.",
-            "create_tenant1.j2":"[RenderClass]: create_tenant1.j2 was validated.",
-            "create_tenant2.j2":"[RenderClass]: create_tenant2.j2 was validated."
-        }
+        "date":"07.01.2026_02.15.17",
+        "success":false,
+        "log":"[Errno 2] No such file or directory: 'C:\\\\Users\\\\chris\\\\Documents\\\\VisualProjects\\\\devaci_module\\\\template_v2.0.j2'",
+        "path":"C:\\Users\\chris\\Documents\\VisualProjects\\devaci_module\\template_v2.0.j2",
+        "name":"template_v2.0.j2"
     }
 ]

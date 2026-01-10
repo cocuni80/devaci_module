@@ -18,7 +18,7 @@ INSTALL_REQUIRES = [
 
 setuptools.setup(
     name="devaci_module",
-    version="1.4.5",
+    version="1.5.0",
     author="Jorge Riveros",
     author_email="christian.riveros@outlook.com",
     license="MIT",
@@ -32,6 +32,8 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
+        "Intended Audience :: Developers",
+        "Topic :: System :: Networking",
     ],
     python_requires=">=3.9.2",
 )
