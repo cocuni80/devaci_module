@@ -4,15 +4,13 @@ from typing import Optional
 from datetime import datetime
 from yaml.constructor import SafeConstructor
 from yaml.reader import Reader
-from yaml.scanner import Scanner, ScannerError
+from yaml.scanner import Scanner
 from yaml.parser import Parser
 from yaml.composer import Composer
 from yaml.resolver import Resolver
 from yaml import load
 
 import jinja2
-import yaml
-from pathlib import Path
 
 # ------------------------------------------   Safe Loader
 
@@ -32,8 +30,9 @@ def range_filter(value):
             result.append(int(part))
     return result
 
+
 def nan_filter(value):
-    
+
     if str(value) == "nan":
         return False
     return True
@@ -53,28 +52,25 @@ def no_convert_float_constructor(loader, node):
     return node.value
 
 
-def remove_str_nan_keys(d):
-    if isinstance(d, dict):
-        return {k: remove_str_nan_keys(v) for k, v in d.items() if v != "nan"}
-    elif isinstance(d, list):
-        return [remove_str_nan_keys(item) for item in d]
-    else:
-        return d
-
-
 def replace_str_nan_with_empty(obj):
     """
-    Reemplaza todos los valores 'nan' (como string) por una cadena vacía ("")
-    en un diccionario o lista multinivel.
+    Recursively replaces string values equal to 'nan' (case-insensitive)
+    with an empty string ("") in nested dictionaries and lists.
+
+    - Traverses arbitrarily deep dict/list structures
+    - Preserves non-string values
+    - Ignores real NaN values (float('nan')); only string "nan" is replaced
+
+    :param obj: Any Python object (dict, list, str, or other)
+    :return: Object with string 'nan' values replaced by ""
     """
     if isinstance(obj, dict):
         return {k: replace_str_nan_with_empty(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [replace_str_nan_with_empty(item) for item in obj]
-    elif isinstance(obj, str) and obj.strip().lower() == "nan":
+    if isinstance(obj, list):
+        return [replace_str_nan_with_empty(v) for v in obj]
+    if isinstance(obj, str) and obj.strip().lower() == "nan":
         return ""
-    else:
-        return obj
+    return obj
 
 
 class MySafeConstructor(SafeConstructor):
@@ -182,50 +178,63 @@ class JinjaClass:
     def __init__(self):
         # --------------   Init Information
         self._template = None
+        self._name = None
 
         # --------------   Jinja2 Setup
         self._setup = {
             "loader": jinja2.BaseLoader(),
             "extensions": ["jinja2.ext.do"],
         }
+        self.env = jinja2.Environment(**self._setup)
+
+        # --------------   Jinja2 Filters
+        self.env.filters["bool"] = str_to_bool
+        self.env.filters["range"] = range_filter
+        self.env.filters["nan"] = nan_filter
 
         # --------------   Output Information
         self._result = JinjaResult()
 
-    def render(self, path: Path, **kwargs) -> None:
+    def render(self, **kwargs) -> None:
+        RED = "\033[31;1m"
+        GREEN = "\033[32;1m"
+        WHITE = "\033[37;1m"
+        YELLOW = "\033[33;1m"
+        MAGENTA = "\033[35;1m"
+        RESET = "\033[0m"
+
         try:
-            with open(path, "r", encoding="utf-8") as file:
-                self._template = file.read()
-            env = jinja2.Environment(**self._setup)            
-            # Registrar filtros
-            env.filters["bool"] = str_to_bool
-            env.filters["range"] = range_filter
-            env.filters["nan"] = nan_filter
-            render_str = env.from_string(self._template).render(kwargs)
-            # self._result.output = load(render_str, MySafeLoader)
-            # self._result.output = remove_str_nan_keys(load(render_str, MySafeLoader))
-            self._result.output = replace_str_nan_with_empty(
-                load(render_str, MySafeLoader)
-            )
+            output = self.env.from_string(self._template).render(**kwargs)
+            self._result.output = replace_str_nan_with_empty(load(output, MySafeLoader))
+            self._result.log = f"[Jinja]: Template {self._name} was rendered sucessfully."
             self._result.success = True
-            # print(self._result.output)
-            self._result.log = "[JinjaClass]: Jinja template was sucessfully rendered."
-        except ScannerError as e:
-            self._result.log = f"[ScannerError]: {path.name} error, {str(e)}"
-            # print(f"\x1b[33;1m[ScannerError]: {str(e)}\x1b[0m")
-        except jinja2.exceptions.TemplateSyntaxError as e:
-            self._result.log = f"[TemplateSyntaxError]: {path.name} error, {str(e)}"
-            # print(f"\x1b[33;1m[TemplateSyntaxError]: {str(e)}\x1b[0m")
-        except jinja2.exceptions.UndefinedError as e:
-            self._result.log = f"[UndefinedError]: {path.name} error, {str(e)}"
-            # print(f"\x1b[31;1m[UndefinedError]: {str(e)}\x1b[0m")
-        except yaml.MarkedYAMLError as e:
-            self._result.log = f"[MarkedYAMLError]: {path.name} error, {str(e)}"
-            # print(f"\x1b[31;1m[MarkedYAMLError]: {str(e)}\x1b[0m")
+            print(f"{YELLOW}[Jinja]:{GREEN} Template {self._name} was rendered successfully.{RESET}")
         except Exception as e:
-            self._result.log = f"[JinjaException]: {path.name} error, {str(e)}"
-            # print(f"\x1b[31;1m[JinjaException]: {str(e)}\x1b[0m")
+            self._result.log = f"[Jinja] -> [{type(e).__name__}]: {e.message}. Line: {e.lineno}"
+            print(f"{YELLOW}[Jinja] -> [{type(e).__name__}]:{RED} {str(e)}. Line: {e.lineno}{RESET}")
+
+    @property
+    def template(self) -> str:
+        return self._template
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     @property
     def result(self) -> JinjaResult:
         return self._result
+
+    @template.setter
+    def template(self, value) -> None:
+        """
+        Insert templates into the JinjaClass
+        """
+        self._template = value
+
+    @name.setter
+    def name(self, value) -> None:
+        """
+        Insert templates into the JinjaClass
+        """
+        self._name = value

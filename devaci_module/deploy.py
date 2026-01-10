@@ -8,9 +8,6 @@
 
 """ACI module configuration for the ACI Python SDK (cobra)."""
 
-from optparse import Values
-import os
-import requests
 import urllib3
 import json
 import sys
@@ -26,11 +23,24 @@ import rich
 from rich.syntax import Syntax
 from .jinja import JinjaClass
 from .cobra import CobraClass
+import threading
+import warnings
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ------------------------------------------   Deployer Result Class
+
+
+RED = "\033[31;1m"
+GREEN = "\033[32;1m"
+WHITE = "\033[37;1m"
+YELLOW = "\033[33;1m"
+MAGENTA = "\033[35;1m"
+CYAN = "\033[36;1m"
+RESET = "\033[0m"
+HIDE_CURSOR = "\033[?25l"
+SHOW_CURSOR = "\033[?25h"
 
 
 class DeployResult:
@@ -40,32 +50,36 @@ class DeployResult:
 
     def __init__(self):
         self.date = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
-        self._output = dict()
         self._success = False
-        self._log = dict()
-
-    @property
-    def output(self) -> dict:
-        return self._output
+        self._log = []
+        self._path = Path("/")
+        self._name = "template"
 
     @property
     def success(self) -> bool:
         return self._success
 
     @property
-    def log(self) -> dict:
+    def log(self) -> list:
         return self._log
 
     @property
-    def json(self) -> list:
-        return [
-            {
-                "date": self.date,
-                "output": self._output,
-                "success": self._success,
-                "log": self._log,
-            }
-        ]
+    def path(self) -> Path:
+        return self._path
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def json(self) -> dict:
+        return {
+            "date": self.date,
+            "success": self._success,
+            "log": self._log,
+            "path": str(self.path),
+            "name": self._name,
+        }
 
     @success.setter
     def success(self, value) -> None:
@@ -73,14 +87,23 @@ class DeployResult:
 
     @log.setter
     def log(self, value) -> None:
-        self._log.update(value)
+        if isinstance(value, str):
+            self._log.append(value)
+        elif isinstance(value, list):
+            self._log.extend(value)
+        else:
+            return
 
-    @output.setter
-    def output(self, value) -> None:
-        self._output.update(value)
+    @path.setter
+    def path(self, value) -> None:
+        self._path = value
+
+    @name.setter
+    def name(self, value) -> None:
+        self._name = value
 
     def __str__(self):
-        return "DeployerResult"
+        return "DeployResult"
 
 
 # ------------------------------------------   Deployer Class
@@ -88,465 +111,327 @@ class DeployResult:
 
 class DeployClass:
     """
-    Cobra DeployClass from Cobra SDK
-    \n username: APIC username
-    \n password: APIC username
-    \n ip: APIC IPv4
-    \n testing: True or False
-    \n log: Logging file path
-    \n logging: True or False
+    Deployment manager for Cisco ACI using the Cobra SDK.
+
+    This class handles the full deployment workflow, including:
+    - Template rendering (Jinja2)
+    - Cobra model rendering
+    - Optional filtering of input variables
+    - Output visualization and persistence
+    - Optional commit to APIC
+
+    Configuration options:
+    - ip (str): APIC IPv4 address
+    - username (str): APIC username
+    - password (str): APIC password
+    - testing (bool): Enable dry-run mode (default: False)
+    - filter_by (str): Variable name used for filtering (default: "tag")
+    - timer (int): Countdown timer in seconds before commit (default: 5)
+    - show_output (bool): Pretty-print rendered output to the terminal
+    - file_output (str): Output filename (JSON or XML)
+    - secure (bool): Verify SSL certificates (default: False)
+    - render_to_xml (bool): Render output as XML instead of JSON (default: True)
+    - working_folder (Path): Base directory for templates and data files
+    - logging (bool): Enable execution logging to file
     """
 
     def __init__(self, **kwargs):
-        # --------------   Render Information
-        self._template: list = kwargs.get("template", [])
-        self.log = kwargs.get("log", "logging.json")
 
-        # --------------   Login Information
-        self._username = kwargs.get("username", "admin")
-        self.__password = kwargs.get("password", "Cisco123!")
-        self.__token = kwargs.get("token", None)
-        self._timeout = kwargs.get("timeout", 180)
-        self._secure = kwargs.get("secure", False)
-        self.testing = kwargs.get("testing", False)
-        self.logging = kwargs.get("logging", False)
-        self.render_to_xml = kwargs.get("render_to_xml", True)
-        self.render_vars = kwargs.get("render_vars", False)
-
-        # --------------   Controller Information
+        # --------------   Setting Information
         self._ip = kwargs.get("ip", "127.0.0.1")
         self._url = "https://{}".format(self._ip)
+        self._username = kwargs.get("username", "admin")
+        self.__password = kwargs.get("password", "Cisco123!")
+        self._timeout = kwargs.get("timeout", 180)
+        self._secure = kwargs.get("secure", False)
+        self._testing = kwargs.get("testing", False)
+        self._timer = kwargs.get("timer", 5)
+        self._show_output = kwargs.get("show_output", False)
+        self._file_output = kwargs.get("file_output", None)
+        self._logging = kwargs.get("logging", True)
+        self._render_to_xml = kwargs.get("render_to_xml", True)
+        self._filters_source_sheet = kwargs.get("filters_source_sheet", None)
+        self._filters_condition_field = kwargs.get("filters_condition_field", "enabled")
+        self._filters_output_field = kwargs.get("filters_output_field", "name")
+        self._filters = kwargs.get("filters", None)
+        self._filter_by = kwargs.get("filter_by", "tag")
+        self._filter_on_excel = kwargs.get("filter_by", "tag")
+        self._working_folder: Path = kwargs.get("working_folder", Path.cwd())
 
-        # --------------   Session Class
-        self._session = cobra.mit.session.LoginSession(
-            self._url,
-            self._username,
-            self.__password,
-            self._secure,
-            self._timeout,
-        )
+        # --------------   Cobra variables
+
+        self._cobra = CobraClass()
+        self._session = cobra.mit.session.LoginSession(self._url, self._username, self.__password, self._secure, self._timeout)
         self.__modir = cobra.mit.access.MoDirectory(self._session)
-        self._variables: dict = {}
-        self._vars: list = []
-        # self._path: Path = None
 
-        self._result = DeployResult()
+        # --------------   Input Information
+        self._template: list = kwargs.get("template", [])
+
+        # --------------   Output Variables
+        self._variables: dict = {}
+        self._results: list = []
 
     # -------------------------------------------------   Control
 
-    def login(self) -> bool:
-        """
-        Login with credentials
-        """
-        try:
-            self.__modir.login()
-            return True
-        except cobra.mit.session.LoginError as e:
-            msg = f"[LoginError]: {str(e)}"
-            self._result.log = {"login": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-            return False
-        except cobra.mit.request.QueryError as e:
-            msg = f"[QueryError]: {str(e)}"
-            self._result.log = {"login": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-            return False
-        except requests.exceptions.ConnectionError as e:
-            msg = f"[ConnectionError]: {str(e)}"
-            self._result.log = {"login": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-            return False
-        except Exception as e:
-            msg = f"[LoginException]: {str(e)}"
-            self._result.log = {"login": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-            return False
-
-    def logout(self) -> None:
-        try:
-            if self.__modir.exists:
-                self.__modir.logout()
-        except Exception as e:
-            msg = f"[LogoutError]: {str(e)}"
-            self._result.log = {"logout": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-
-    def session_recreate(self, cookie, version) -> None:
-        """
-        Recreate Session
-        """
-        try:
-            session = cobra.mit.session.LoginSession(
-                self._url, None, None, secure=self._secure, timeout=self._timeout
-            )
-            session.cookie = cookie
-            session._version = version
-            self.__modir = cobra.mit.access.MoDirectory(session)
-        except Exception as e:
-            msg = f"[SessionError]: {str(e)}"
-            self._result.log = {"session": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-
-    def render(self, template: Path) -> None:
-        """
-        Render configuration
-        """
-        try:
-            _jinja = JinjaClass()
-            _cobra = CobraClass()
-            # print(self._variables)
-            _jinja.render(template, **self._variables)
-            # print(_jinja.result.output)
-            _cobra.render(template, _jinja.result)
-            if _cobra.result.output:
-                if self.render_to_xml:
-                    self._result.output = {template.name: _cobra.result.output.xmldata}
-                else:
-                    self._result.output = {
-                        template.name: json.loads(_cobra.result.output.data)
-                    }
-                self._result.success = True
-                msg = f"[RenderClass]: {template.name} was validated."
-                self._result.log = {template.name: msg}
-                print(f"\x1b[32;1m{msg}\x1b[0m")
-            else:
-                # self._result.log = "[RenderError]: No valid Cobra template."
-                self._result.success = False
-                self._result.log = {template.name: _cobra.result.log}
-                print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
-        except cobra.mit.request.CommitError as e:
-            self._result.success = False
-            msg = f"[RenderError]: Error validating {template.name}!. {str(e)}"
-            self._result.log = {template.name: msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-        except Exception as e:
-            self._result.success = False
-            msg = f"[RenderException]: Error validating {template.name}!. {str(e)}"
-            self._result.log = {template.name: msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-
-    def commit(self, template: Path) -> None:
-        """
-        Commit configuration
-        """
-        try:
-            _jinja = JinjaClass()
-            _cobra = CobraClass()
-            _jinja.render(template, **self._variables)
-            _cobra.render(template, _jinja.result)
-            if _cobra.result.output:
-                if self.render_to_xml:
-                    self._result.output = {template.name: _cobra.result.output.xmldata}
-                else:
-                    self._result.output = {
-                        template.name: json.loads(_cobra.result.output.data)
-                    }
-                self.__modir.commit(_cobra.result.output)
-                self._result.success = True
-                msg = f"[DeployClass]: {template.name} was succesfully deployed."
-                self._result.log = {template.name: msg}
-                print(f"\x1b[32;1m{msg}\x1b[0m")
-            else:
-                # self._result.log = "[DeployError]: No valid Cobra template."
-                self._result.success = False
-                self._result.log = {template.name: _cobra.result.log}
-                print(f"\x1b[31;1m{_cobra.result.log}\x1b[0m")
-        except cobra.mit.request.CommitError as e:
-            self._result.success = False
-            msg = f"[DeployError]: Error deploying {template.name}!. {str(e)}"
-            self._result.log = {template.name: msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-        except Exception as e:
-            self._result.success = False
-            msg = f"[DeployException]: Error deploying {template.name}!. {str(e)}"
-            self._result.log = {template.name: msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-
-    def check(self) -> None:
-        """
-        Render configuration
-        """
-        if self._template:
-            for temp in self._template:
-                self.render(temp)
-        else:
-            self._result.success = False
-            msg = "[RenderException]: No templates configured!."
-            self._result.log = {"check": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-        if self.logging:
-            self.record()
-
-    def render_variables(self) -> None:
-        """
-        Render variables
-        """
-        try:
-            data = self._variables.copy()
-            if "vars" not in data:
-                raise Exception("No 'vars' key found!")
-            vars = {v["name"]: v for v in data.pop("vars")}
-            data.pop("summary", None)
-
-            self._variables = {
-                key: [
-                    {
-                        **item,
-                        **{
-                            var: vars.get(item[var], item.get(var))
-                            for var in self._vars
-                            if var in item
-                        },
-                    }
-                    for item in values
-                ]
-                for key, values in data.items()
-            }
-
-        except Exception as e:
-            self._result.success = False
-            msg = f"[VarsError]: Error rendering vars!. {str(e)}"
-            self._result.log = {"variables": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
-
     def deploy(self) -> None:
         """
-        Deploy configuration
+        Execute the deployment workflow for all configured templates.
+        \nWorkflow:
+        - Render Jinja templates using loaded variables
+        - Render Cobra configuration
+        - Collect per-template results
+        - Optionally log results, print output, save output, and deploy to APIC
         """
+
         if not self._template:
-            self._result.success = False
-            msg = "[RenderException]: No templates configured!."
-            self._result.log = {"render": msg} if self.testing else {"deploy": msg}
-            print(f"\x1b[31;1m{msg}\x1b[0m")
+            print(f"{YELLOW}[Deploy] -> [ConfigError]: {RED}No templates configured!.{RESET}")
             return
-        if self.render_vars:
-            self.render_variables()
 
-        if self.testing:
-            for temp in self._template:
-                self.render(temp)
-        else:
-            if self.login():
-                self.temporizador("Deploying templates in")
-                for temp in self._template:
-                    self.commit(temp)
-                self.logout()
+        for template, path in self._template:
+            _deploy = DeployResult()
+            _deploy.path = path
+            _deploy.name = path.name if isinstance(path, Path) else path
+            try:
+                _jinja = JinjaClass()
+                _jinja.template = template
+                _jinja.name = _deploy.name
+                _jinja.render(**self._variables)
+                _deploy.log = _jinja.result.log
+                if not _jinja.result.success:
+                    _deploy.success = False
+                    raise RuntimeError(_jinja.result.log)
 
-        if self.logging:
-            self.record()
+                self._cobra.render(_jinja.result)
+                _deploy.log = self._cobra.result.log
+                if not self._cobra.result.success:
+                    _deploy.success = False
+                    raise RuntimeError(self._cobra.result.log)
 
-    def record(self) -> None:
-        """
-        Save Logging into file
-        """
-        df = pd.DataFrame(self._result.json)
-        df.to_json(
-            self.log,
-            orient="records",
-            indent=4,
-            force_ascii=False,
-        )
+                _deploy.success = True
+                print(f"{YELLOW}[Deploy]: {GREEN}Template {path.name} was deployed successfully.{RESET}")
+            except Exception as e:
+                _deploy.success = False
+                print(f"{YELLOW}[Deploy] -> [RenderError]: {RED}Template {path.name} was not deployed.{RESET}")
+            self._results.append(_deploy.json)
 
-    def temporizador(self, msg: str = "", delay: int = 3) -> None:
+        if self._show_output:
+            self.print_output()
+
+        if self._file_output:
+            self.save_output(self._file_output)
+
+        if not self._testing and self._cobra.result.success:
+            try:
+                timer_thread = self.start_timer(f"{HIDE_CURSOR}{YELLOW}[Deploy]: {CYAN}Deploying templates to APIC [{self._ip}] in")
+                timer_thread.join()
+                self.__modir.login()
+                self.__modir.commit(self._cobra.config)
+                print(f"{YELLOW}[Deploy]: {GREEN}Template was succesfully deployed.{RESET}")
+            except Exception as e:
+                print(f"{YELLOW}[Deploy] -> [{type(e).__name__}]: {RED}{str(e)}{RESET}")
+            finally:
+                print(f"{SHOW_CURSOR}")
+                self.__modir.logout()
+
+        if self._logging:
+            with open(self._working_folder / "logging.json", "w", encoding="utf-8") as f:
+                json.dump(self._results, f, indent=4, ensure_ascii=False)
+
+    def save_output(self, name: str = "output") -> None:
         """
-        Default 5sec
+        Save rendered configuration output to disk in a human-readable format.
+        - Writes XML if self._render_to_xml is True
+        - Writes JSON otherwise
+        - Output file is saved inside the working folder
         """
-        for seconds in range(delay + 1):
-            barra = "██" * seconds + "  " * (delay - seconds)
-            sys.stdout.write(
-                f"\r\x1b[33;1m{msg} [\x1b[37;1m{barra}\x1b[33;1m] {seconds}/{delay} seconds."
-            )
+        if not self.config:
+            return
+
+        suffix = "xml" if self._render_to_xml else "json"
+        output_path = self._working_folder / f"{name}.{suffix}"
+        try:
+            if self._render_to_xml:
+                dom = xml.dom.minidom.parseString(self.config)
+                content = dom.toprettyxml(indent="\t")
+            else:
+                content = json.dumps(self.config, indent=4, ensure_ascii=False)
+            output_path.write_text(content, encoding="utf-8")
+        except Exception as e:
+            print(f"\x1b[31;1m[SaveOutputError]: Failed to save output file! {e}\x1b[0m")
+
+    def print_output(self, theme: str = "fruity", line_numbers: bool = True) -> None:
+        """
+        Pretty-print the rendered configuration to the terminal.
+        \nSupported themes: monokai, dracula, solarized-dark, solarized-light, github, gruvbox-dark, gruvbox-light, nord, fruity
+        - Supports XML and JSON output
+        - Uses Rich syntax highlighting
+        - Optional line numbers
+        """
+        if not self.config:
+            return
+        try:
+            print("\n\x1b[1m\x1b[47;1m-------------------> output.\x1b[0m")
+            if self._render_to_xml:
+                content = xml.dom.minidom.parseString(self.config).toprettyxml(indent="\t")
+                lexer = "xml"
+            else:
+                content = json.dumps(self.config, indent=4, ensure_ascii=False)
+                lexer = "json"
+            rich.print(Syntax(content, lexer, theme=theme, line_numbers=line_numbers))
+        except Exception as e:
+            print(f"\x1b[31;1m[PrintOutputError]: Error printing output! {e}\x1b[0m")
+
+    def start_timer(self, msg=""):
+        t = threading.Thread(target=self.timer, args=(msg,), daemon=True)
+        t.start()
+        return t
+
+    def timer(self, msg: str = "") -> None:
+        """
+        Display a countdown timer with a progress bar in the terminal.
+        - Uses ANSI colors for visual feedback
+        - Updates the same console line in-place
+        - Duration is defined by self._timer (seconds)
+        """
+        total = self._timer
+        block = "██"
+        space = "  "
+
+        for remaining in range(total, -1, -1):
+            filled = total - remaining
+            bar = block * filled + space * remaining
+            sys.stdout.write(f"\r{msg} {remaining} seconds " f"[{WHITE}{bar}{CYAN}]")
             sys.stdout.flush()
             time.sleep(1)
-        print("\n\x1b[0m")
-
-    def show_output(self, theme: str = "fruity", line_numbers: bool = True) -> None:
-        """
-        Show indent Output in pretty format
-        \n- theme: <monokai, dracula, solarized-dark, solarized-light, github, gruvbox-dark, gruvbox-light, nord, fruity>\n- line_numbers: Boolean
-        """
-        if self._result.output:
-            for key, value in self._result.output.items():
-                msg = f"\n-------------------> {key} output."
-                print(f"\x1b[1m\x1b[47;1m{msg}\x1b[0m")
-
-                if self.render_to_xml:
-                    dom = xml.dom.minidom.parseString(value)
-                    pretty_xml = dom.toprettyxml(indent="\t")
-                    rich.print(
-                        Syntax(
-                            pretty_xml, "xml", theme=theme, line_numbers=line_numbers
-                        )
-                    )
-
-                else:
-                    pretty_json = json.dumps(value, indent=4, ensure_ascii=False)
-                    rich.print(
-                        Syntax(
-                            pretty_json, "json", theme=theme, line_numbers=line_numbers
-                        )
-                    )
-
-    def save_output(self, name: str = "template") -> None:
-        """
-        Save indent Output in pretty format
-        """
-        if self._result.output:
-            for key, value in self._result.output.items():
-                msg = f"-> Output saved at {Path(key).with_suffix('.xml' if self.render_to_xml else '.json').absolute()}"
-                print(f"\x1b[33;1m{msg}\x1b[0m")
-
-                if self.render_to_xml:
-                    dom = xml.dom.minidom.parseString(value)
-                    pretty_xml = dom.toprettyxml(indent="\t")
-                    file = Path(key).with_suffix(".xml")
-                    with open(file, "w", encoding="utf-8") as f:
-                        f.write(pretty_xml)
-                else:
-                    pretty_json = json.dumps(value, indent=4, ensure_ascii=False)
-                    file = Path(key).with_suffix(".json")
-                    with open(file, "w", encoding="utf-8") as f:
-                        f.write(pretty_json)
-    
-    def save_output2(self, name: list = None) -> None:
-        """
-        Save indent Output in pretty format
-        """
-        if self._result.output:
-            for key, value in self._result.output.items():
-                msg = f"-> Output saved at {Path(key).with_suffix('.xml' if self.render_to_xml else '.json').absolute()}"
-                print(f"\x1b[33;1m{msg}\x1b[0m")
-
-                if self.render_to_xml:
-                    dom = xml.dom.minidom.parseString(value)
-                    pretty_xml = dom.toprettyxml(indent="\t")
-                    file = Path(key).with_suffix(".xml")
-                    with open(file, "w", encoding="utf-8") as f:
-                        f.write(pretty_xml)
-                else:
-                    pretty_json = json.dumps(value, indent=4, ensure_ascii=False)
-                    file = Path(key).with_suffix(".json")
-                    with open(file, "w", encoding="utf-8") as f:
-                        f.write(pretty_json)
+        print(f"{RESET}")
 
     @property
-    def result(self):
-        return self._result
-
-    @property
-    def output(self):
-        return self._result.output
+    def results(self):
+        """Return the execution results (read-only)."""
+        return self._results
 
     @property
     def variables(self):
+        """Return the execution results (read-only)."""
         return self._variables
 
     @property
-    def vars(self):
-        return self._vars
-
-    @property
-    def template(self) -> list[Path]:
+    def template(self):
         """
-        Define your template:
-        \n- Option1: Use Path for define the template, Ex. \n aci.template = Path1
-        \n- Option2: List of Path for multiple templates deployments, Ex. \n aci.template = [Path1, Path2, ...]
-        \n- Option3: Each time you define a path a list is generated and each new path is added to this list, \nEx. \n aci.template = Path1 \n aci.template = Path2 \n Result: aci.template = [Path1, Path2]
+        Load template content into memory.
+        \nAccepted inputs:
+        - str: template filename (loaded from working_folder)
+        - list[str]: multiple template filenames
+        - tuple[str, str]: (template_content, template_name)
+        - list[tuple[str, str]]: multiple in-memory templates
+        \nStored internally as:
+        - list of (template_content, template_path)
         """
         return self._template
 
     @property
-    def csv(self) -> Path:
-        """
-        Show CSV file path.
-        """
-        return self._path
+    def config(self):
+        """Return the execution results (read-only)."""
+        return self._cobra.result.xml if self._render_to_xml else self._cobra.result.json
 
     @property
-    def xlsx(self) -> Path:
-        """
-        Show XLSX file path.
-        """
-        return self._path
+    def csv(self):
+        """Return the execution results (read-only)."""
+        return self._variables
 
-    @vars.setter
-    def vars(self, value) -> None:
-        """
-        Insert vars list to list of Variables
-        """
-        self._vars = value
+    @property
+    def xlsx(self):
+        """Return the execution results (read-only)."""
+        return self._variables
+
+    @variables.setter
+    def variables(self, value) -> None:
+        self._variables = value
 
     @template.setter
     def template(self, value) -> None:
         """
-        Insert templates path to list of templates
+        Load template content into memory.
+        \nAccepted inputs:
+        - str: template filename (loaded from working_folder)
+        - list[str]: multiple template filenames
+        - tuple[str, str]: (template_content, template_name)
+        - list[tuple[str, str]]: multiple in-memory templates
+        \nStored internally as:
+        - list of (template_content, template_path)
         """
-        if isinstance(value, Path):
-            self._template.append(value)
-        elif isinstance(value, list) and all(isinstance(item, Path) for item in value):
-            self._template = value
-        else:
-            self._result.success = False
-            self._result.log = "[DeployException]: No valid templates!."
-            self._template = []
+        if not value:
+            return
+        values = value if isinstance(value, list) else [value]
+        for item in values:
+            try:
+                # Case 1: in-memory template (content, name)
+                if isinstance(item, tuple) and len(item) == 2:
+                    content, name = item
+                    if not isinstance(content, str) or not isinstance(name, str):
+                        raise ValueError("Template content and name must be strings")
+                    path = Path(name)
+                    self._template.append((content, path))
+                # Case 2: template loaded from file
+                elif isinstance(item, str):
+                    path = self._working_folder / item
+                    with open(path, "r", encoding="utf-8") as file:
+                        self._template.append((file.read(), path))
+                else:
+                    raise ValueError("Invalid template format")
+            except Exception as e:
+                print(f"\x1b[31;1m[TemplateException]: Error loading template.\x1b[0m")
 
     @csv.setter
     def csv(self, value) -> None:
         """
         Insert CSV files path to list of Variables
         """
-        if isinstance(value, Path):
+        files = [value] if isinstance(value, str) else value
+        for file in files:
             try:
-                name = os.path.splitext(os.path.basename(value))[0]
-                df = pd.read_csv(value)
-                self._variables = self._variables | {name: df.to_dict(orient="records")}
+                filters = self._filters
+                path = self._working_folder / file
+                name = path.stem
+                df = pd.read_csv(path)
+                self._variables |= {name: self.apply_filter(df, filters)}
             except Exception as e:
-                msg = f"[CSVException]: Error loading file!. {str(e)}"
-                print(f"\x1b[31;1m{msg}\x1b[0m")
-        elif isinstance(value, list) and all(isinstance(item, Path) for item in value):
-            for item in value:
-                try:
-                    name = os.path.splitext(os.path.basename(item))[0]
-                    df = pd.read_csv(item)
-                    self._variables = self._variables | {
-                        name: df.to_dict(orient="records")
-                    }
-                except Exception as e:
-                    msg = f"[CSVException]: Error loading file!. {str(e)}"
-                    print(f"\x1b[31;1m{msg}\x1b[0m")
-        else:
-            self._result.success = False
-            self._result.log = "[LoadException]: No valid CSV files!."
-            self._variables = []
+                print(f"\x1b[31;1m[CSVException]: Error loading CSV file! {e}\x1b[0m")
 
     @xlsx.setter
     def xlsx(self, value) -> None:
         """
-        Insert XLSX files path to list of Variables
+        Load XLSX file(s), optionally extract filters, and store processed sheets as variables.
         """
-        if isinstance(value, Path):
+        files = [value] if isinstance(value, str) else value
+        for file in files:
             try:
-                sheets = pd.read_excel(value, sheet_name=None)
-                self._variables = self._variables | {
-                    sheet: df.to_dict(orient="records") for sheet, df in sheets.items()
-                }
+                filters = None
+                path = self._working_folder / file
+
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message="Data Validation extension is not supported*", category=UserWarning)
+                    sheets = pd.read_excel(path, sheet_name=None)
+
+                if self._filters_source_sheet:
+                    df_filters = sheets.get(self._filters_source_sheet)
+                    if df_filters is None:
+                        raise ValueError(f"Sheet '{self._filters_source_sheet}' does not exist!")
+                    filters = df_filters.loc[df_filters[self._filters_condition_field], self._filters_output_field].tolist()
+                elif self._filters:
+                    filters = self._filters
+
+                self._variables |= {name: self.apply_filter(df, filters) for name, df in sheets.items()}
             except Exception as e:
-                msg = f"[XLSXException]: Error loading file!. {str(e)}"
-                print(f"\x1b[31;1m{msg}\x1b[0m")
-        elif isinstance(value, list) and all(isinstance(item, Path) for item in value):
-            for item in value:
-                try:
-                    sheets = pd.read_excel(item, sheet_name=None)
-                    sheets = {
-                        sheet: df.to_dict(orient="records")
-                        for sheet, df in sheets.items()
-                    }
-                    self._variables = self._variables | sheets
-                    # print(self._variables)
-                except Exception as e:
-                    msg = f"[XLSXException]: Error loading file!. {str(e)}"
-                    print(f"\x1b[31;1m{msg}\x1b[0m")
-        else:
-            self._result.success = False
-            self._result.log = "[LoadException]: No valid XLSX files!."
-            self._variables = []
+                print(f"\x1b[31;1m[XLSXException]: Error loading XLSX file '{file}': {e}\x1b[0m")
+
+    def apply_filter(self, df, filters=None):
+        """
+        Ultra defensive tag filter bound to class config.
+        """
+        column = self._filter_by
+        if not filters or not column or column not in df.columns:
+            return df.to_dict("records") if not filters else []
+
+        s = df[column]
+        return df[s.notna() & s.astype(str).str.strip().ne("") & s.isin(filters)].to_dict(orient="records")
