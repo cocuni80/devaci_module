@@ -25,6 +25,7 @@ from .jinja import JinjaClass
 from .cobra import CobraClass
 import threading
 import warnings
+import getpass
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -132,22 +133,38 @@ class DeployClass:
     - secure (bool): Verify SSL certificates (default: False)
     - render_to_xml (bool): Render output as XML instead of JSON (default: True)
     - working_folder (Path): Base directory for templates and data files
+    - logging_output (str): Logging filename (default: "logging.json")
     - logging (bool): Enable execution logging to file
     """
 
     def __init__(self, **kwargs):
 
+        # -------------- Flags first
+        self._testing = kwargs.get("testing", False)
+
         # --------------   Setting Information
-        self._ip = kwargs.get("ip", "127.0.0.1")
-        self._url = "https://{}".format(self._ip)
-        self._username = kwargs.get("username", "admin")
-        self.__password = kwargs.get("password", "Cisco123!")
+        self._ip = kwargs.get("ip")
+        self._username = kwargs.get("username")
+        self.__password = kwargs.get("password")
+
+        # --- Prompt only if NOT testing
+        if not self._testing:
+            if not self._ip:
+                self._ip = input("APIC IP Address: ").strip()
+
+            if not self._username:
+                self._username = input("APIC Username: ").strip()
+
+            if not self.__password:
+                self.__password = getpass.getpass("APIC Password: ")
+
+        self._url = f"https://{self._ip}" if self._ip else None
         self._timeout = kwargs.get("timeout", 180)
         self._secure = kwargs.get("secure", False)
-        self._testing = kwargs.get("testing", False)
         self._timer = kwargs.get("timer", 5)
         self._show_output = kwargs.get("show_output", False)
         self._file_output = kwargs.get("file_output", None)
+        self._logging_output = kwargs.get("logging_output", "logging.json")
         self._logging = kwargs.get("logging", True)
         self._render_to_xml = kwargs.get("render_to_xml", True)
         self._filters_source_sheet = kwargs.get("filters_source_sheet", None)
@@ -208,7 +225,7 @@ class DeployClass:
                     raise RuntimeError(self._cobra.result.log)
 
                 _deploy.success = True
-                print(f"{YELLOW}[Deploy]: {GREEN}Template {path.name} was deployed successfully.{RESET}")
+                print(f"{YELLOW}[Deploy]: {GREEN}Template {path.name} was rendered successfully.{RESET}")
             except Exception as e:
                 _deploy.success = False
                 print(f"{YELLOW}[Deploy] -> [RenderError]: {RED}Template {path.name} was not deployed.{RESET}")
@@ -234,8 +251,21 @@ class DeployClass:
                 self.__modir.logout()
 
         if self._logging:
-            with open(self._working_folder / "logging.json", "w", encoding="utf-8") as f:
-                json.dump(self._results, f, indent=4, ensure_ascii=False)
+            log_file: Path = Path(self._working_folder / self._logging_output).with_suffix(".json")
+            try:
+                if log_file.exists():
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        history = json.load(f)
+                        if not isinstance(history, list):
+                            history = []
+                else:
+                    history = []
+                history.extend(self._results)
+                with open(log_file, "w", encoding="utf-8") as f:
+                    json.dump(history, f, indent=4, ensure_ascii=False)
+
+            except Exception as e:
+                print(f"\x1b[31;1m[LoggingError]: {e}\x1b[0m")
 
     def save_output(self, name: str = "output") -> None:
         """
