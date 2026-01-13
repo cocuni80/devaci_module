@@ -123,7 +123,7 @@ class JinjaResult:
     """
 
     def __init__(self):
-        self.date = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
+        self.date = datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
         self._output = None
         self._success = False
         self._log = str()

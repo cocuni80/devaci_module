@@ -83,7 +83,7 @@ class CobraResult:
     """
 
     def __init__(self):
-        self.date = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
+        self.date = datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
         self._config = None
         self._success = False
         self._log = []
@@ -186,7 +186,7 @@ class CobraClass:
 
             if not callable(caller):
                 msg = f"[Cobra] -> [ConfigError]: Class {key} does not exist. "
-                print(f"{YELLOW}[Cobra] -> [ConfigError]::{RED} Class {key}does not exist.{RESET}")
+                print(f"{YELLOW}[Cobra] -> [ConfigError]::{RED} Class {key} does not exist.{RESET}")
                 self._result.log = msg
                 success = False
                 continue

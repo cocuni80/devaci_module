@@ -30,4 +30,3 @@ if __name__ == "__main__":
         ROOT / "templates/create_tenant2.j2",
     ]
     aci.deploy()
-    aci.show_output()
