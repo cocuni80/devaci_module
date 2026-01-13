@@ -50,7 +50,7 @@ class DeployResult:
     """
 
     def __init__(self):
-        self.date = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
+        self.date = datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
         self._success = False
         self._log = []
         self._path = Path("/")
@@ -225,10 +225,12 @@ class DeployClass:
                     raise RuntimeError(self._cobra.result.log)
 
                 _deploy.success = True
+                _deploy.log = f"[Deploy]: Template {path.name} was rendered successfully."
                 print(f"{YELLOW}[Deploy]: {GREEN}Template {path.name} was rendered successfully.{RESET}")
             except Exception as e:
                 _deploy.success = False
-                print(f"{YELLOW}[Deploy] -> [RenderError]: {RED}Template {path.name} was not deployed.{RESET}")
+                _deploy.log = f"[Deploy] -> [RenderError]: Failed to render template {path.name}."
+                print(f"{YELLOW}[Deploy] -> [RenderError]: {RED}Failed to render template {path.name}.{RESET}")
             self._results.append(_deploy.json)
 
         if self._show_output:
@@ -238,34 +240,26 @@ class DeployClass:
             self.save_output(self._file_output)
 
         if not self._testing and self._cobra.result.success:
+            deploy = None
             try:
                 timer_thread = self.start_timer(f"{HIDE_CURSOR}{YELLOW}[Deploy]: {CYAN}Deploying templates to APIC [{self._ip}] in")
                 timer_thread.join()
+                date = datetime.now().strftime("%d/%m/%Y-%H:%M:%S")
                 self.__modir.login()
                 self.__modir.commit(self._cobra.config)
-                print(f"{YELLOW}[Deploy]: {GREEN}Template was succesfully deployed.{RESET}")
+                deploy = {"date": date, "success": True, "log": f"[Deploy]: Template was succesfully deployed to APIC: {self._ip}."}
+                self._results.append(deploy)
+                print(f"{YELLOW}[Deploy]: {GREEN}Template was succesfully deployed to APIC: {self._ip}.{RESET}")
             except Exception as e:
-                print(f"{YELLOW}[Deploy] -> [{type(e).__name__}]: {RED}{str(e)}{RESET}")
+                deploy = {"date": date, "success": False, "log": f"[Deploy] -> [{type(e).__name__}]: Unable to deploy to APIC: {self._ip}, {str(e)}"}
+                self._results.append(deploy)
+                print(f"{YELLOW}[Deploy] -> [{type(e).__name__}]: {RED}Unable to deploy to APIC: {self._ip}, {str(e)}{RESET}")
             finally:
                 print(f"{SHOW_CURSOR}")
                 self.__modir.logout()
 
         if self._logging:
-            log_file: Path = Path(self._working_folder / self._logging_output).with_suffix(".json")
-            try:
-                if log_file.exists():
-                    with open(log_file, "r", encoding="utf-8") as f:
-                        history = json.load(f)
-                        if not isinstance(history, list):
-                            history = []
-                else:
-                    history = []
-                history.extend(self._results)
-                with open(log_file, "w", encoding="utf-8") as f:
-                    json.dump(history, f, indent=4, ensure_ascii=False)
-
-            except Exception as e:
-                print(f"\x1b[31;1m[LoggingError]: {e}\x1b[0m")
+            self.save_logging()
 
     def save_output(self, name: str = "output") -> None:
         """
@@ -334,6 +328,34 @@ class DeployClass:
             sys.stdout.flush()
             time.sleep(1)
         print(f"{RESET}")
+
+    def save_logging(self) -> None:
+        """
+        Append execution results to a JSON log file in a defensive way.
+        - Creates the file if it does not exist
+        - Handles empty files
+        - Handles corrupted / invalid JSON
+        - Ensures the log structure is always a list
+        """
+
+        if not self._logging:
+            return
+        log_file: Path = Path(self._working_folder / self._logging_output).with_suffix(".json")
+        history = []
+        try:
+            if log_file.exists():
+                try:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        history = json.load(f)
+                        if not isinstance(history, list):
+                            history = []
+                except json.JSONDecodeError:
+                    history = []
+            history.extend(self._results)
+            with open(log_file, "w", encoding="utf-8") as f:
+                json.dump(history, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"\x1b[31;1m[LoggingError]: {type(e).__name__}: {e}\x1b[0m")
 
     @property
     def results(self):
