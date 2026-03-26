@@ -139,6 +139,36 @@ class CobraResult:
 
 # ------------------------------------------   ACI Class
 
+ACI_SCHEMA = {
+    "Uni": {
+        "class": cobra.model.pol.Uni,
+        "parent": None,
+    },
+    "fvTenant": {
+        "class": cobra.model.fv.Tenant,
+        "parent": "Uni",
+    },
+    "fvAp": {
+        "class": cobra.model.fv.Ap,
+        "parent": "fvTenant",
+    },
+    "fvAEPg": {
+        "class": cobra.model.fv.AEPg,
+        "parent": "fvAp",
+        "children": {
+            "fvRsBd": {
+                "class": cobra.model.fv.RsBd,
+            },
+            "fvRsDomAtt": {
+                "class": cobra.model.fv.RsDomAtt,
+            },
+            "fvRsPathAtt": {
+                "class": cobra.model.fv.RsPathAtt,
+            },
+        },
+    },
+}
+
 
 class CobraClass:
     """
@@ -213,11 +243,13 @@ class CobraClass:
 
     # -------------------------------------------------   REST Tenant Management
 
+  
+
     def fvTenant(self, value) -> None:
         """
         Tenants > All Tenants
         """
-        Uni = cobra.model.pol.Uni(self.__root)
+        Uni = cobra.model.pol.Uni("")
         for fvTenant in value:
             Tenant = cobra.model.fv.Tenant(Uni, **fvTenant)
             self.config.addMo(Tenant)
@@ -237,6 +269,7 @@ class CobraClass:
         """
         Tenants > Application Profiles > Application EPGs
         """
+        print(value)
         Uni = cobra.model.pol.Uni(self.__root)
         for fvAEPg in value:
             Tenant = cobra.model.fv.Tenant(Uni, name=fvAEPg["tenant"])
